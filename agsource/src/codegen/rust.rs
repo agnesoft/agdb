@@ -105,8 +105,9 @@ fn decl(item: &Item) -> String {
             } else {
                 format!(": {}", bounds(&t.supertraits))
             };
+            let unsafe_kw = if t.unsafety { "unsafe " } else { "" };
             format!(
-                "{vis}trait {}{}{supertraits}{} {}",
+                "{vis}{unsafe_kw}trait {}{}{supertraits}{} {}",
                 t.name,
                 params(&t.generics),
                 where_clause(&t.generics),
@@ -118,8 +119,9 @@ fn decl(item: &Item) -> String {
                 .trait_
                 .as_ref()
                 .map_or(String::new(), |t| format!("{} for ", path(t)));
+            let unsafe_kw = if i.unsafety { "unsafe " } else { "" };
             format!(
-                "impl{} {trait_}{}{} {}",
+                "{unsafe_kw}impl{} {trait_}{}{} {}",
                 params(&i.generics),
                 ty(&i.self_ty),
                 where_clause(&i.generics),
@@ -518,6 +520,7 @@ fn expr(e: &Expr) -> String {
             format!("{} {} {}", expr(left), op.token(), expr(right))
         }
         Expr::Block(b) => block(b),
+        Expr::Unsafe(b) => format!("unsafe {}", block(b)),
         Expr::Break => "break".to_string(),
         Expr::Call { func, args } => format!("{}({})", expr(func), exprs(args)),
         Expr::Cast { expr: e, ty: t } => format!("{} as {}", expr(e), ty(t)),
@@ -863,6 +866,7 @@ enum Empty {}
     }
 }
 trait Empty {}
+unsafe trait U {}
 ";
 
             assert_eq!(print(source), source);
@@ -879,6 +883,7 @@ trait Empty {}
     }
 }
 impl S {}
+unsafe impl U {}
 ";
 
             assert_eq!(print(source), source);
@@ -907,6 +912,9 @@ type Output<T> = <T>::Output<u8>;
     let (e, _): (u8, u8) = (1, 2);
     d = a;
     {
+        let j = 1;
+    }
+    unsafe {
         let j = 1;
     }
     let g = |x: u8| -> u8 {

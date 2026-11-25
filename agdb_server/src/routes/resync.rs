@@ -273,26 +273,21 @@ async fn stage_snapshot_files(
             std::fs::create_dir_all(parent)?;
         }
 
-        if *db_type == DbKind::Memory {
+        {
             let db_arc = user_db.0.clone();
             let staging_path = db_staging
                 .to_str()
                 .ok_or_else(|| ServerError::from("invalid staging path"))?
                 .to_string();
-            tokio::task::spawn_blocking(move || db_arc.blocking_read().backup(&staging_path))
+            if *db_type != DbKind::Memory {
+                tokio::task::spawn_blocking(move || {
+                    db_arc.sync()?;
+                    db_arc.backup(&staging_path)
+                })
                 .await??;
-        } else {
-            let db_arc = user_db.0.clone();
-            let staging_path = db_staging
-                .to_str()
-                .ok_or_else(|| ServerError::from("invalid staging path"))?
-                .to_string();
-            tokio::task::spawn_blocking(move || {
-                let mut guard = db_arc.blocking_write();
-                guard.sync()?;
-                guard.backup(&staging_path)
-            })
-            .await??;
+            } else {
+                tokio::task::spawn_blocking(move || db_arc.backup(&staging_path)).await??;
+            }
         }
 
         stage_db_files(config, data_dir, staging_dir, owner, db_name).await?;
@@ -770,17 +765,17 @@ async fn stage_single_db(
         .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
 
-    if db_type == DbKind::Memory {
+    {
         let db_arc = user_db.0.clone();
-        tokio::task::spawn_blocking(move || db_arc.blocking_read().backup(&staging_path)).await??;
-    } else {
-        let db_arc = user_db.0.clone();
-        tokio::task::spawn_blocking(move || {
-            let mut guard = db_arc.blocking_write();
-            guard.sync()?;
-            guard.backup(&staging_path)
-        })
-        .await??;
+        if db_type != DbKind::Memory {
+            tokio::task::spawn_blocking(move || {
+                db_arc.sync()?;
+                db_arc.backup(&staging_path)
+            })
+            .await??;
+        } else {
+            tokio::task::spawn_blocking(move || db_arc.backup(&staging_path)).await??;
+        }
     }
 
     stage_db_files(config, data_dir, staging_dir, owner, db).await

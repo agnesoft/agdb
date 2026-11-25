@@ -19,25 +19,24 @@ use agdb_api::QueryAudit;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use tokio::sync::RwLock;
 
 #[derive(Clone)]
-pub(crate) struct UserDb(pub(crate) Arc<RwLock<DbAny>>);
+pub(crate) struct UserDb(pub(crate) Arc<DbAny>);
 
 impl UserDb {
     pub(crate) fn new(name: &str, db_type: DbKind, config: StorageConfig) -> ServerResult<Self> {
-        let mut db = match db_type {
+        let db = match db_type {
             DbKind::Memory => DbAny::new_memory(name)?,
             DbKind::File => DbAny::new_file(name)?,
             DbKind::Mapped => DbAny::new_mapped(name)?,
         };
         db.set_storage_config(config);
         log_migration(name, &db);
-        Ok(Self(Arc::new(RwLock::new(db))))
+        Ok(Self(Arc::new(db)))
     }
 
-    pub(crate) async fn exec(&self, mut queries: Queries) -> ServerResult<Vec<QueryResult>> {
-        self.0.read().await.transaction(|t| {
+    pub(crate) fn exec(&self, mut queries: Queries) -> ServerResult<Vec<QueryResult>> {
+        self.0.transaction(|t| {
             let mut results = vec![];
 
             for q in queries.0.iter_mut() {
@@ -49,12 +48,12 @@ impl UserDb {
         })
     }
 
-    pub(crate) async fn exec_mut(
+    pub(crate) fn exec_mut(
         &self,
         mut queries: Queries,
         username: &str,
     ) -> ServerResult<(Vec<QueryResult>, Vec<QueryAudit>)> {
-        self.0.write().await.transaction_mut(|t| {
+        self.0.transaction_mut(|t| {
             let mut audit = vec![];
             let mut results = vec![];
             let mut qs = vec![];
@@ -69,18 +68,18 @@ impl UserDb {
         })
     }
 
-    pub(crate) async fn optimize_storage(&self) -> ServerResult<()> {
-        self.0.write().await.optimize_storage()?;
+    pub(crate) fn optimize_storage(&self) -> ServerResult<()> {
+        self.0.optimize_storage()?;
         Ok(())
     }
 
-    pub(crate) async fn rename(&self, target_name: &str) -> ServerResult<()> {
-        self.0.write().await.rename(target_name)?;
+    pub(crate) fn rename(&self, target_name: &str) -> ServerResult<()> {
+        self.0.rename(target_name)?;
         Ok(())
     }
 
-    pub(crate) async fn size(&self) -> u64 {
-        self.0.read().await.size()
+    pub(crate) fn size(&self) -> u64 {
+        self.0.size()
     }
 }
 

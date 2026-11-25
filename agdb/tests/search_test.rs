@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn search_from() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -26,7 +26,7 @@ fn search_from() {
 
 #[test]
 fn search_from_multiple_edges() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -44,7 +44,7 @@ fn search_from_multiple_edges() {
 
 #[test]
 fn search_from_circular() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -62,7 +62,7 @@ fn search_from_circular() {
 
 #[test]
 fn search_from_self_referential() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
@@ -77,7 +77,7 @@ fn search_from_self_referential() {
 
 #[test]
 fn search_from_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -95,7 +95,7 @@ fn search_from_limit() {
 
 #[test]
 fn search_from_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -113,7 +113,7 @@ fn search_from_offset() {
 
 #[test]
 fn search_from_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -131,7 +131,7 @@ fn search_from_offset_limit() {
 
 #[test]
 fn search_from_to() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -149,7 +149,7 @@ fn search_from_to() {
 
 #[test]
 fn search_from_to_shortcut() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -164,7 +164,7 @@ fn search_from_to_shortcut() {
 
 #[test]
 fn search_from_to_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -182,7 +182,7 @@ fn search_from_to_limit() {
 
 #[test]
 fn search_from_to_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -200,7 +200,7 @@ fn search_from_to_offset() {
 
 #[test]
 fn search_from_to_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
         QueryBuilder::insert()
@@ -223,7 +223,7 @@ fn search_from_to_offset_limit() {
 
 #[test]
 fn search_to() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -241,7 +241,7 @@ fn search_to() {
 
 #[test]
 fn search_to_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -256,7 +256,7 @@ fn search_to_limit() {
 
 #[test]
 fn search_to_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -274,7 +274,7 @@ fn search_to_offset() {
 
 #[test]
 fn search_to_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -292,7 +292,7 @@ fn search_to_offset_limit() {
 
 #[test]
 fn search_from_ordered_by() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query(), 1);
 
     let users = db.exec_mut_result(
@@ -341,7 +341,7 @@ fn search_from_ordered_by() {
 
 #[test]
 fn search_from_ordered_by_limit_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query(), 1);
 
     let users = db.exec_mut_result(
@@ -409,7 +409,7 @@ fn search_from_ordered_by_limit_offset() {
 
 #[test]
 fn search_to_ordered_by() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query(), 1);
 
     let users = db.exec_mut_result(
@@ -476,7 +476,7 @@ fn search_to_ordered_by() {
 
 #[test]
 fn search_breadth_first_from() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -494,7 +494,7 @@ fn search_breadth_first_from() {
 
 #[test]
 fn search_depth_first_from_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -516,7 +516,7 @@ fn search_depth_first_from_limit() {
 
 #[test]
 fn search_depth_first_from_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -538,7 +538,7 @@ fn search_depth_first_from_offset() {
 
 #[test]
 fn search_depth_first_from_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -561,7 +561,7 @@ fn search_depth_first_from_offset_limit() {
 
 #[test]
 fn search_depth_first_from() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -579,7 +579,7 @@ fn search_depth_first_from() {
 
 #[test]
 fn search_depth_first_to() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -597,7 +597,7 @@ fn search_depth_first_to() {
 
 #[test]
 fn search_depth_first_to_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -615,7 +615,7 @@ fn search_depth_first_to_limit() {
 
 #[test]
 fn search_depth_first_to_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -633,7 +633,7 @@ fn search_depth_first_to_offset() {
 
 #[test]
 fn search_depth_first_to_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
     db.exec_mut(
         QueryBuilder::insert()
@@ -658,7 +658,7 @@ fn search_depth_first_to_offset_limit() {
 
 #[test]
 fn search_to_from() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     // Linear chain: 1 -> 2 -> 3 -> 4
     db.exec_mut(QueryBuilder::insert().nodes().count(4).query(), 4);
     db.exec_mut(
@@ -678,7 +678,7 @@ fn search_to_from() {
 
 #[test]
 fn search_to_from_same_as_forward() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     // Same graph as search_from_to test
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
@@ -703,7 +703,7 @@ fn search_to_from_same_as_forward() {
 
 #[test]
 fn search_to_from_no_path() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     // 1 -> 2, 3 is disconnected
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
@@ -712,14 +712,14 @@ fn search_to_from_no_path() {
 
 #[test]
 fn search_to_from_same_origin_destination() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_ids(QueryBuilder::search().to(1).from(1).query(), &[]);
 }
 
 #[test]
 fn search_to_from_shortcut() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     // 1 -> 2 -> 3 -> 4 -> 5, and 1 -> 5 (shortcut)
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(
@@ -736,7 +736,7 @@ fn search_to_from_shortcut() {
 
 #[test]
 fn search_to_from_with_conditions() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     // 1 -> 2 -> 3
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
@@ -756,7 +756,7 @@ fn search_to_from_with_conditions() {
 
 #[test]
 fn search_from_to_offset_beyond_results() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -780,7 +780,7 @@ fn search_from_to_offset_beyond_results() {
 
 #[test]
 fn search_from_to_offset_limit_overflow() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -803,7 +803,7 @@ fn search_from_to_offset_limit_overflow() {
 
 #[test]
 fn search_from_offset_limit_overflow() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()

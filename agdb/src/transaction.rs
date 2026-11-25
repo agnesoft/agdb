@@ -32,11 +32,13 @@ use crate::storage::pages::Writer;
 use crate::storage::root::Meta;
 use std::borrow::Cow;
 
-/// The pages a [`Transaction`] reads: the committed ones or those of the
-/// write transaction it runs in.
+/// The pages a [`Transaction`] reads: the committed ones, those of the
+/// write transaction it runs in, or a concurrent epoch-based snapshot.
 pub(crate) enum ReadView<'a, S: StorageData> {
     Committed(Reader<'a, S>),
     Writing(&'a Writer<'a, S>),
+    /// Epoch-based concurrent snapshot (see [`ConcurrentRoot`]).
+    Concurrent(&'a dyn View),
 }
 
 impl<S: StorageData> View for ReadView<'_, S> {
@@ -44,6 +46,7 @@ impl<S: StorageData> View for ReadView<'_, S> {
         match self {
             Self::Committed(reader) => reader.len(),
             Self::Writing(writer) => writer.len(),
+            Self::Concurrent(view) => view.len(),
         }
     }
 
@@ -51,6 +54,7 @@ impl<S: StorageData> View for ReadView<'_, S> {
         match self {
             Self::Committed(reader) => reader.read(pos, len),
             Self::Writing(writer) => writer.read(pos, len),
+            Self::Concurrent(view) => view.read(pos, len),
         }
     }
 }

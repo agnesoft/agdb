@@ -16,7 +16,7 @@ struct User {
 }
 
 fn main() -> Result<(), DbError> {
-    let mut db = DbMemory::new("agdb_example")?;
+    let db = DbMemory::new("agdb_example")?;
 
     // Create two indexes, one for username and one for token. They can just as well
     // be created later and will index all existing data as well.

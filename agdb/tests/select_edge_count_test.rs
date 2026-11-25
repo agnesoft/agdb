@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn select_edge_count_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -46,7 +46,7 @@ fn select_edge_count_ids() {
 
 #[test]
 fn select_edge_count_from_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -84,7 +84,7 @@ fn select_edge_count_from_ids() {
 
 #[test]
 fn select_edge_count_to_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -122,7 +122,7 @@ fn select_edge_count_to_ids() {
 
 #[test]
 fn select_edge_count_multi() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -170,7 +170,7 @@ fn select_edge_count_multi() {
 
 #[test]
 fn select_edge_count_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -210,7 +210,7 @@ fn select_edge_count_search() {
 
 #[test]
 fn select_edge_count_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -281,7 +281,7 @@ fn select_edge_count_search_alt() {
 
 #[test]
 fn select_edge_count_non_nodes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -308,7 +308,7 @@ fn select_edge_count_non_nodes() {
 
 #[test]
 fn select_edge_count_invalid_query() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -348,7 +348,7 @@ fn select_edge_count_all_empty() {
 
 #[test]
 fn select_edge_count_all() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -366,7 +366,7 @@ fn select_edge_count_all() {
 
 #[test]
 fn select_edge_count_all_after_removal() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()

@@ -84,6 +84,10 @@ impl Overlay {
         1 << self.shift
     }
 
+    pub(crate) fn shift(&self) -> u32 {
+        self.shift
+    }
+
     /// The storage failed to restore after a transaction and may hold
     /// some of its writes until the next [`Writer::new`] restores it.
     pub(crate) fn poisoned(&self) -> bool {
@@ -256,6 +260,51 @@ impl<'a, S: StorageData> Writer<'a, S> {
 
     pub(crate) fn rollback(mut self) -> Result<(), DbError> {
         self.restore()
+    }
+
+    /// Returns the old page contents from committed storage for each page
+    /// in the overlay. Used by the MVCC layer to populate the version
+    /// store before the pages are overwritten by [`commit`](Self::commit).
+    ///
+    /// **Precondition:** no spill has occurred during this transaction
+    /// (overlay limit was set high enough), so the storage still holds the
+    /// committed data.
+    pub(crate) fn capture_pages(&self) -> Result<Vec<(u64, Vec<u8>)>, DbError> {
+        let shift = self.overlay.shift;
+        let page_size = self.overlay.page_size();
+        let base_len = self.storage.len();
+        let mut captured = Vec::with_capacity(self.overlay.pages.len());
+
+        for &(page, _) in &self.overlay.pages {
+            let start = page << shift;
+
+            if start < base_len {
+                let len = page_size.min(base_len - start);
+                let old_data = self.storage.read(start, len)?;
+                captured.push((page, old_data.into_owned()));
+            }
+        }
+
+        Ok(captured)
+    }
+
+    /// Whether the storage size changed during this transaction (the
+    /// allocator requested more or fewer pages). Used by the MVCC layer
+    /// to know whether the committed buffer will be resized during commit.
+    pub(crate) fn storage_resized(&self) -> bool {
+        self.storage.len() != self.len
+    }
+
+    /// The number of dirty pages currently in the overlay.
+    pub(crate) fn dirty_page_count(&self) -> usize {
+        self.overlay.pages.len()
+    }
+
+    /// Returns the page numbers of all dirty pages in the overlay.
+    /// Used by the MVCC layer to update `page_epochs` even when no
+    /// readers were active (so old-page data was not captured).
+    pub(crate) fn dirty_pages(&self) -> Vec<u64> {
+        self.overlay.pages.iter().map(|&(page, _)| page).collect()
     }
 
     fn apply(&mut self) -> Result<(), DbError> {

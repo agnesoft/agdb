@@ -10,7 +10,7 @@ use test_db::TestDb;
 
 #[test]
 fn insert_edges_from_to_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
@@ -25,7 +25,7 @@ fn insert_edges_from_to_rollback() {
 
 #[test]
 fn insert_edges_missing_from() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_error(
@@ -36,7 +36,7 @@ fn insert_edges_missing_from() {
 
 #[test]
 fn insert_edges_from_to() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -57,7 +57,7 @@ fn insert_edges_from_to() {
 
 #[test]
 fn insert_edges_from_to_each() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -77,7 +77,7 @@ fn insert_edges_from_to_each() {
 
 #[test]
 fn insert_edges_from_to_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -115,7 +115,7 @@ fn insert_edges_from_to_values() {
 
 #[test]
 fn insert_edges_from_to_each_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -171,7 +171,7 @@ fn insert_edges_from_to_each_values() {
 
 #[test]
 fn insert_edges_from_to_each_values_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -222,7 +222,7 @@ fn insert_edges_from_to_each_values_uniform() {
 
 #[test]
 fn insert_edges_from_to_values_bad_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -243,7 +243,7 @@ fn insert_edges_from_to_values_bad_length() {
 
 #[test]
 fn insert_edges_from_to_values_each_bad_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -265,7 +265,7 @@ fn insert_edges_from_to_values_each_bad_length() {
 
 #[test]
 fn insert_edges_from_to_values_asymmetric() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -303,7 +303,7 @@ fn insert_edges_from_to_values_asymmetric() {
 
 #[test]
 fn insert_edges_from_to_values_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -341,7 +341,7 @@ fn insert_edges_from_to_values_uniform() {
 
 #[test]
 fn insert_edges_from_to_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(4).query(), 4);
     db.exec_mut(
         QueryBuilder::insert()
@@ -363,7 +363,7 @@ fn insert_edges_from_to_search() {
 
 #[test]
 fn insert_edges_from_to_inserted_nodes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let from = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
     let to = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
 
@@ -375,7 +375,7 @@ fn insert_edges_from_to_inserted_nodes() {
 
 #[test]
 fn insert_or_update_new_edge() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_ids(
         QueryBuilder::insert()
@@ -390,7 +390,7 @@ fn insert_or_update_new_edge() {
 
 #[test]
 fn insert_or_update_existing_edge() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_ids(
@@ -407,7 +407,7 @@ fn insert_or_update_existing_edge() {
 
 #[test]
 fn insert_or_update_mismatch_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_error(
@@ -424,7 +424,7 @@ fn insert_or_update_mismatch_length() {
 
 #[test]
 fn insert_or_update_unknown_edge() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
@@ -439,7 +439,7 @@ fn insert_or_update_unknown_edge() {
 
 #[test]
 fn insert_or_update_node_id() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_error(
         QueryBuilder::insert()

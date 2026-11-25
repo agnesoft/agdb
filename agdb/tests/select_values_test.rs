@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn select_values_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -52,7 +52,7 @@ fn select_values_ids() {
 
 #[test]
 fn select_values_ids_missing_key() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -79,7 +79,7 @@ fn select_values_ids_missing_key() {
 
 #[test]
 fn select_values_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -132,7 +132,7 @@ fn select_values_search() {
 
 #[test]
 fn select_values_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -186,7 +186,7 @@ fn select_values_search_alt() {
 
 #[test]
 fn select_values_with_vec_db_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let items = DbValue::VecDbValue(vec![
         DbValue::I64(1),
         DbValue::String("hello".to_string()),

@@ -48,7 +48,7 @@ fn values(i: u64) -> Vec<DbKeyValue> {
 
 fn db<S: StorageData>(dir: &TestDir, name: &str, index: bool) -> DbImpl<S> {
     let path = dir.path().join(name);
-    let mut db = DbImpl::new(path.to_str().expect("temp dir should be valid UTF-8"))
+    let db = DbImpl::new(path.to_str().expect("temp dir should be valid UTF-8"))
         .expect("db should be created");
 
     if index {

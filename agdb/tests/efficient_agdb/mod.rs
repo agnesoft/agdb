@@ -9,10 +9,7 @@ use agdb::DbKeyValue;
 use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
-use std::ops::Deref;
-use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 #[derive(DbType)]
 struct User {
@@ -41,9 +38,9 @@ struct Comment {
     body: String,
 }
 
-fn create_db() -> Result<Arc<RwLock<Db>>, DbError> {
-    let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
-    db.write()?.transaction_mut(|t| -> Result<(), DbError> {
+fn create_db() -> Result<Arc<Db>, DbError> {
+    let db = Arc::new(Db::new("social.agdb")?);
+    db.transaction_mut(|t| -> Result<(), DbError> {
         t.exec_mut(
             QueryBuilder::insert()
                 .nodes()
@@ -63,7 +60,7 @@ fn create_db() -> Result<Arc<RwLock<Db>>, DbError> {
     Ok(db)
 }
 
-fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
+fn register_user(db: &Db, user: &User) -> Result<DbId, DbError> {
     db.transaction_mut(|t| -> Result<DbId, DbError> {
         if t.exec(
             QueryBuilder::search()
@@ -99,7 +96,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
     })
 }
 
-fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, DbError> {
+fn create_post(db: &Db, user: DbId, post: &Post) -> Result<DbId, DbError> {
     db.transaction_mut(|t| -> Result<DbId, DbError> {
         let post = t
             .exec_mut(QueryBuilder::insert().element(post).query())?
@@ -119,12 +116,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, DbError> {
     })
 }
 
-fn create_comment(
-    db: &mut Db,
-    user: DbId,
-    parent: DbId,
-    comment: &Comment,
-) -> Result<DbId, DbError> {
+fn create_comment(db: &Db, user: DbId, parent: DbId, comment: &Comment) -> Result<DbId, DbError> {
     db.transaction_mut(|t| -> Result<DbId, DbError> {
         let comment = t
             .exec_mut(QueryBuilder::insert().element(comment).query())?
@@ -144,7 +136,7 @@ fn create_comment(
     })
 }
 
-fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
+fn like(db: &Db, user: DbId, id: DbId) -> Result<(), DbError> {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -156,7 +148,7 @@ fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
     Ok(())
 }
 
-fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
+fn remove_like(db: &Db, user: DbId, id: DbId) -> Result<(), DbError> {
     db.transaction_mut(|t| -> Result<(), DbError> {
         t.exec_mut(
             QueryBuilder::remove()
@@ -261,7 +253,7 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, DbError> {
     .try_into()
 }
 
-fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
+fn add_likes_to_posts(db: &Db) -> Result<(), DbError> {
     db.transaction_mut(|t| -> Result<(), DbError> {
         let posts = t.exec(
             QueryBuilder::search()
@@ -308,7 +300,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbErr
     .try_into()
 }
 
-fn mark_top_level_comments(db: &mut Db) -> Result<(), DbError> {
+fn mark_top_level_comments(db: &Db) -> Result<(), DbError> {
     db.exec_mut(
         QueryBuilder::insert()
             .values_uniform([("level", 1).into()])
@@ -331,48 +323,47 @@ fn efficient_agdb() -> Result<(), DbError> {
         email: "john@doe.com".to_string(),
         password: "password123".to_string(),
     };
-    register_user(db.write()?.deref_mut(), &user)?;
-    let user_id = login(db.read()?.deref(), "john_doe", "password123")?;
+    register_user(&db, &user)?;
+    let user_id = login(&db, "john_doe", "password123")?;
 
     let post = Post {
         db_id: None,
         title: "Awesome".to_string(),
         body: "http://pictures.com/awesome.png".to_string(),
     };
-    let post_id = create_post(db.write()?.deref_mut(), user_id, &post)?;
+    let post_id = create_post(&db, user_id, &post)?;
 
     let comment = Comment {
         body: "This is truly awesome".to_string(),
     };
-    let comment_id = create_comment(db.write()?.deref_mut(), user_id, post_id, &comment)?;
+    let comment_id = create_comment(&db, user_id, post_id, &comment)?;
 
     let reply_comment = Comment {
         body: "Indeed it is".to_string(),
     };
-    let reply_comment_id =
-        create_comment(db.write()?.deref_mut(), user_id, comment_id, &reply_comment)?;
+    let reply_comment_id = create_comment(&db, user_id, comment_id, &reply_comment)?;
 
-    like(db.write()?.deref_mut(), user_id, post_id)?;
-    like(db.write()?.deref_mut(), user_id, comment_id)?;
-    like(db.write()?.deref_mut(), user_id, reply_comment_id)?;
-    remove_like(db.write()?.deref_mut(), user_id, comment_id)?;
+    like(&db, user_id, post_id)?;
+    like(&db, user_id, comment_id)?;
+    like(&db, user_id, reply_comment_id)?;
+    remove_like(&db, user_id, comment_id)?;
 
-    let posts = posts(db.read()?.deref(), 0, 10)?;
+    let posts = posts(&db, 0, 10)?;
     assert_eq!(posts.len(), 1);
 
-    let user_posts = user_posts_ids(db.read()?.deref(), user_id)?;
+    let user_posts = user_posts_ids(&db, user_id)?;
     assert_eq!(user_posts.len(), 1);
 
-    let user_post_titles = post_titles(db.read()?.deref(), user_posts)?;
+    let user_post_titles = post_titles(&db, user_posts)?;
     assert_eq!(user_post_titles, vec!["Awesome"]);
 
-    let comments = comments(db.read()?.deref(), post_id)?;
+    let comments = comments(&db, post_id)?;
     assert_eq!(comments.len(), 2);
 
-    add_likes_to_posts(db.write()?.deref_mut())?;
-    mark_top_level_comments(db.write()?.deref_mut())?;
+    add_likes_to_posts(&db)?;
+    mark_top_level_comments(&db)?;
 
-    let posts = liked_posts(db.read()?.deref(), 0, 10)?;
+    let posts = liked_posts(&db, 0, 10)?;
     assert_eq!(posts.len(), 1);
 
     Ok(())

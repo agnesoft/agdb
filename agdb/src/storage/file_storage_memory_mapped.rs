@@ -114,6 +114,14 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
         self.memory.read(pos, value_len)
     }
 
+    fn supports_epoch_reads(&self) -> bool {
+        true
+    }
+
+    fn disable_spill(&mut self) {
+        self.file.set_overlay_limit(u64::MAX);
+    }
+
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
         self.file.rename(new_name)?;
         self.memory.rename(new_name)

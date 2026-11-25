@@ -14,7 +14,7 @@ struct UserDb {
 }
 
 fn main() -> Result<(), DbError> {
-    let mut db = DbMemory::new("agdb_example")?;
+    let db = DbMemory::new("agdb_example")?;
 
     // Inserts root node for databases and the user.
     db.exec_mut(

@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn remove_index_with_data() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()
@@ -27,13 +27,13 @@ fn remove_index_with_data() {
 
 #[test]
 fn remove_missing_index() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().index("username").query(), 0);
 }
 
 #[test]
 fn remove_index_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()
@@ -58,7 +58,7 @@ fn remove_index_rollback() {
 
 #[test]
 fn remove_node_with_indexed_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()
@@ -78,7 +78,7 @@ fn remove_node_with_indexed_values() {
 
 #[test]
 fn remove_indexed_key() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()
@@ -98,7 +98,7 @@ fn remove_indexed_key() {
 
 #[test]
 fn remove_indexed_key_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()

@@ -7,7 +7,7 @@ use test_db::TestDb;
 
 #[test]
 fn remove_values_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -61,7 +61,7 @@ fn remove_values_ids() {
 
 #[test]
 fn remove_values_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -98,7 +98,7 @@ fn remove_values_search() {
 
 #[test]
 fn remove_values_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -136,7 +136,7 @@ fn remove_values_search_alt() {
 
 #[test]
 fn remove_missing_key() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()

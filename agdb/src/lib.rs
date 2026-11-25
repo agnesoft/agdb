@@ -24,7 +24,7 @@
 //! # let _test_file = agdb::test_utilities::test_file::TestFile::from("db4.agdb");
 //! use agdb::{Db, QueryBuilder};
 //!
-//! let mut db = Db::new("db4.agdb").unwrap();
+//! let db = Db::new("db4.agdb").unwrap();
 //! db.exec_mut(QueryBuilder::insert().nodes().values([[("key", 123).into()]]).query()).unwrap();
 //!
 //! let result = db.exec(QueryBuilder::select().ids(1).query()).unwrap();

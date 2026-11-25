@@ -156,7 +156,7 @@ fn insert_node_values_custom() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         name: "my name".to_string(),
         age: 20,
@@ -181,7 +181,7 @@ fn insert_node_values_uniform_custom() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         name: "my name".to_string(),
         age: 20,
@@ -221,7 +221,7 @@ fn select_custom_value_keys() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         name: "my name".to_string(),
         age: 20,
@@ -269,7 +269,7 @@ fn select_custom_value_with_id() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: None,
         name: "my name".to_string(),
@@ -321,7 +321,7 @@ fn insert_single_element() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: None,
         name: "my name".to_string(),
@@ -373,7 +373,7 @@ fn insert_multiple_elements() {
         age: u64,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: None,
         name: "my name".to_string(),
@@ -419,7 +419,7 @@ fn insert_multiple_elements() {
 
 #[test]
 fn derived_macro_should_not_panic() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     #[derive(Debug, DbType)]
     struct User {
@@ -464,7 +464,7 @@ fn try_from_db_element() {
 
 #[test]
 fn insert_element_alias_update_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: Some("my_alias".into()),
         name: "my name".to_string(),
@@ -488,7 +488,7 @@ fn insert_element_alias_update_values() {
 
 #[test]
 fn insert_element_alias_new() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: Some("my_alias".into()),
         name: "my name".to_string(),
@@ -508,7 +508,7 @@ fn insert_element_alias_new() {
 
 #[test]
 fn insert_element_no_id_new_element() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: None,
         name: "my name".to_string(),
@@ -539,7 +539,7 @@ fn insert_element_no_id_new_element() {
 
 #[test]
 fn insert_element_missing_id() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = MyValue {
         db_id: Some(1.into()),
         name: "my name".to_string(),
@@ -553,7 +553,7 @@ fn insert_element_missing_id() {
 
 #[test]
 fn insert_element_bool() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let mut my_value = MyValueWithBool {
         db_id: None,
         name: "my name".to_string(),
@@ -571,7 +571,7 @@ fn insert_element_bool() {
 
 #[test]
 fn insert_element_to_bool_conversion() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -598,7 +598,7 @@ fn insert_element_to_bool_conversion() {
 
 #[test]
 fn insert_vectorized_custom_types() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_type = MyCustomVec {
         vec: vec![Status::Active, Status::Inactive],
         attributes: vec![
@@ -622,7 +622,7 @@ fn insert_vectorized_custom_types() {
 
 #[test]
 fn select_user_type() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let mut my_value = MyValue {
         db_id: None,
         name: "my name".to_string(),
@@ -639,7 +639,7 @@ fn select_user_type() {
 
 #[test]
 fn with_option_some() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = WithOption {
         name: "my name".to_string(),
         value: Some(20),
@@ -654,7 +654,7 @@ fn with_option_some() {
 
 #[test]
 fn with_option_some_wrong_type() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = WithOption {
         name: "my name".to_string(),
         value: Some(20),
@@ -686,7 +686,7 @@ fn with_option_some_wrong_type() {
 
 #[test]
 fn with_option_none() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = WithOption {
         name: "my name".to_string(),
         value: None,
@@ -701,7 +701,7 @@ fn with_option_none() {
 
 #[test]
 fn with_option_bad_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = WithOption {
         name: "my name".to_string(),
         value: Some(20),
@@ -733,7 +733,7 @@ fn with_option_bad_value() {
 
 #[test]
 fn with_option_missing_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let my_value = WithOption {
         name: "my name".to_string(),
         value: Some(20),
@@ -948,7 +948,7 @@ fn derive_db_type_flatten_nested_struct() {
         },
     };
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().element(&flattened).query(), 3);
 
     let keys = db
@@ -992,7 +992,7 @@ fn derive_db_type_skip_field() {
         custom: MyCustomVec,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let mut skipped = Skipped {
         db_id: None,
         category: "category".to_string(),
@@ -1027,7 +1027,7 @@ fn derive_db_type_rename_field() {
         category: String,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let mut renamed = Renamed {
         db_id: None,
         category: "category".to_string(),
@@ -1140,7 +1140,7 @@ fn derive_db_type_db_id_no_option() {
         name: String,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .element(&S {
@@ -1172,7 +1172,7 @@ fn derive_db_element() {
         name: String,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let root_id = db
         .exec_mut_result(QueryBuilder::insert().nodes().aliases("root").query())
         .elements[0]
@@ -1230,7 +1230,7 @@ fn insert_element_by_value() {
         name: String,
     }
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -1249,7 +1249,7 @@ fn implicit_and_explicit_condition_with_db_element_derive() {
         title: String,
     }
 
-    let mut db = DbMemory::new("").unwrap();
+    let db = DbMemory::new("").unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     db.exec_mut(
@@ -1282,7 +1282,7 @@ fn implicit_and_explicit_condition_with_db_element_derive() {
 
 #[test]
 fn flatten_should_respect_parent_element_id() {
-    let mut db = DbMemory::new("").unwrap();
+    let db = DbMemory::new("").unwrap();
 
     #[derive(Clone, Debug, PartialEq, DbElement)]
     struct Name {
@@ -1440,7 +1440,7 @@ fn flatten_should_respect_parent_element_id() {
 
 #[test]
 fn vec_custom_type_search_contains() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let attrs1 = vec![
@@ -1509,7 +1509,7 @@ fn vec_custom_type_search_contains() {
 
 #[test]
 fn vec_custom_type_search_starts_with() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let statuses = vec![Status::Active, Status::Inactive, Status::Active];
@@ -1555,7 +1555,7 @@ fn vec_custom_type_search_starts_with() {
 
 #[test]
 fn vec_custom_type_search_ends_with() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let statuses = vec![Status::Inactive, Status::Active];
@@ -1601,7 +1601,7 @@ fn vec_custom_type_search_ends_with() {
 
 #[test]
 fn vec_custom_type_amend_add() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     let initial = vec![Attribute {
         name: "color".to_string(),
@@ -1645,7 +1645,7 @@ fn vec_custom_type_amend_add() {
 
 #[test]
 fn vec_custom_type_amend_remove() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     let initial = vec![
         Attribute {
@@ -1699,7 +1699,7 @@ fn vec_custom_type_amend_remove() {
 
 #[test]
 fn vec_custom_type_amend_or_falls_back_to_add() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     let initial = vec![Status::Active];
     let extra = vec![Status::Inactive];
@@ -1735,7 +1735,7 @@ fn vec_custom_type_amend_or_falls_back_to_add() {
 
 #[test]
 fn insert_vectorized_custom_types_with_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let my_type = MyCustomVec {

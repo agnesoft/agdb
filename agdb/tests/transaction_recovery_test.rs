@@ -10,7 +10,7 @@ fn crash_recovery_restores_pre_transaction_state() {
 
     if std::env::var("__AGDB_CRASH_TEST").is_ok() {
         let path = std::env::var("__AGDB_CRASH_DB").unwrap();
-        let mut db = DbFile::new(&path).unwrap();
+        let db = DbFile::new(&path).unwrap();
         let _ = db.transaction_mut(|t| -> Result<(), agdb::DbError> {
             for i in 0..N {
                 t.exec_mut(
@@ -46,7 +46,7 @@ fn crash_recovery_restores_pre_transaction_state() {
     original_values.sort_by_key(|a| a.key.to_string());
 
     {
-        let mut db = DbFile::new(&db_path).unwrap();
+        let db = DbFile::new(&db_path).unwrap();
         db.exec_mut(
             QueryBuilder::insert()
                 .nodes()

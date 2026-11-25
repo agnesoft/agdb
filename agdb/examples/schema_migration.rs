@@ -55,7 +55,7 @@ impl From<UserStatus> for DbValue {
 }
 
 fn main() -> Result<(), DbError> {
-    let mut db = DbMemory::new("agdb_example")?;
+    let db = DbMemory::new("agdb_example")?;
 
     // Inserts root nodes for users.
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["users"]).query())?;

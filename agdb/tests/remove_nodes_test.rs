@@ -10,7 +10,7 @@ use test_db::TestDb;
 
 #[test]
 fn remove_nodes_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.transaction_mut_error(
         |t| {
@@ -25,7 +25,7 @@ fn remove_nodes_rollback() {
 
 #[test]
 fn remove_nodes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -43,19 +43,19 @@ fn remove_nodes() {
 
 #[test]
 fn remove_missing_nodes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().ids(1).query(), 0);
 }
 
 #[test]
 fn remove_missing_nodes_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().ids("alias").query(), 0);
 }
 
 #[test]
 fn remove_nodes_with_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_mut(QueryBuilder::remove().ids(1).query(), 1);
     db.exec_error(
@@ -66,7 +66,7 @@ fn remove_nodes_with_alias() {
 
 #[test]
 fn remove_nodes_no_alias_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
@@ -80,7 +80,7 @@ fn remove_nodes_no_alias_rollback() {
 
 #[test]
 fn remove_missing_nodes_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
@@ -92,7 +92,7 @@ fn remove_missing_nodes_rollback() {
 
 #[test]
 fn remove_missing_nodes_alias_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids("alias").query())?;
@@ -104,7 +104,7 @@ fn remove_missing_nodes_alias_rollback() {
 
 #[test]
 fn remove_nodes_with_edges() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
@@ -120,7 +120,7 @@ fn remove_nodes_with_edges() {
 
 #[test]
 fn remove_nodes_with_edges_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(1).query(), 1);
     db.transaction_mut_error(
@@ -135,7 +135,7 @@ fn remove_nodes_with_edges_rollback() {
 
 #[test]
 fn remove_nodes_with_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -158,7 +158,7 @@ fn remove_nodes_with_values() {
 
 #[test]
 fn remove_nodes_with_values_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -197,7 +197,7 @@ fn remove_nodes_with_values_rollback() {
 
 #[test]
 fn remove_nodes_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
@@ -213,7 +213,7 @@ fn remove_nodes_search() {
 
 #[test]
 fn remove_nodes_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
@@ -224,7 +224,7 @@ fn remove_nodes_search_alt() {
 
 #[test]
 fn remove_nodes_removes_edges_with_all_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -265,7 +265,7 @@ fn remove_nodes_removes_edges_with_all_values() {
 
 #[test]
 fn remove_nodes_removes_edges_with_all_values_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()

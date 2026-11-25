@@ -7,7 +7,7 @@ use test_db::TestDb;
 
 #[test]
 fn select_key_count_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -34,7 +34,7 @@ fn select_key_count_ids() {
 
 #[test]
 fn select_keys_count_no_keys() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_count_elements(
         QueryBuilder::select().key_count().ids("alias").query(),
@@ -50,7 +50,7 @@ fn select_keys_count_no_keys() {
 
 #[test]
 fn select_key_count_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     let values = vec![
         ("key1", 1).into(),
@@ -107,7 +107,7 @@ fn select_key_count_search() {
 
 #[test]
 fn select_key_count_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     let values = vec![
         ("key1", 1).into(),

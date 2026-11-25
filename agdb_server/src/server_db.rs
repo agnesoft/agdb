@@ -189,7 +189,7 @@ pub(crate) async fn new(
 
 impl ServerDb {
     fn new(name: &str, token_expiry_seconds: u64) -> ServerResult<Self> {
-        let mut db = Db::new(name)?;
+        let db = Db::new(name)?;
         crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
@@ -1766,7 +1766,7 @@ mod tests {
         let test_file = TestFile::new();
 
         {
-            let mut db = Db::new(test_file.file_name())?;
+            let db = Db::new(test_file.file_name())?;
             db.transaction_mut(|t| {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
@@ -2101,7 +2101,7 @@ mod tests {
             test_user(&db, "user").await?;
             // A dashboard saved before owners got their role edge.
             db.db
-                .write()
+                .read()
                 .await
                 .transaction_mut(|t| -> ServerResult<()> {
                     let id = t
@@ -2142,7 +2142,7 @@ mod tests {
         let existing_created = 123_u64;
 
         {
-            let mut db = Db::new(test_file.file_name())?;
+            let db = Db::new(test_file.file_name())?;
             db.transaction_mut(|t| {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
                 let dbs = t.exec_mut(

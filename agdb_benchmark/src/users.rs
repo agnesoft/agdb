@@ -16,7 +16,7 @@ pub(crate) fn setup_users<S: StorageData>(
     db: &mut Database<S>,
     config: &Config,
 ) -> BenchResult<()> {
-    let mut db = db.0.write()?;
+    let db = db.0.write()?;
     let user_count = config.user_count();
 
     db.transaction_mut(|t| {

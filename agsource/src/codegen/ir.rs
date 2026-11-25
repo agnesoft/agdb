@@ -226,6 +226,7 @@ pub struct Variant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Trait {
+    pub unsafety: bool,
     pub name: String,
     pub generics: Generics,
     pub supertraits: Vec<Bound>,
@@ -253,6 +254,7 @@ pub enum TraitItemKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Impl {
+    pub unsafety: bool,
     pub generics: Generics,
     pub trait_: Option<Path>,
     pub self_ty: Type,
@@ -459,6 +461,8 @@ pub enum Expr {
         op: UnOp,
         expr: Box<Expr>,
     },
+    /// `unsafe { ... }`.
+    Unsafe(Block),
     While {
         cond: Box<Expr>,
         body: Block,

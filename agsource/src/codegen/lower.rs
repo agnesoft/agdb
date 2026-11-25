@@ -1723,7 +1723,7 @@ impl<'a> Lower<'a> {
     /// A block or `if` of an `else` or an arm as statements.
     fn stmts(&mut self, e: &ir::Expr) -> Vec<Expr> {
         match e {
-            ir::Expr::Block(b) => self.block(b),
+            ir::Expr::Block(b) | ir::Expr::Unsafe(b) => self.block(b),
             e => vec![self.expr(e)],
         }
     }
@@ -1761,7 +1761,7 @@ impl<'a> Lower<'a> {
                     },
                 }
             }
-            ir::Expr::Block(b) => K::If {
+            ir::Expr::Block(b) | ir::Expr::Unsafe(b) => K::If {
                 cond: Expr::new(K::Lit(Lit::Bool(true))).boxed(),
                 then: self.block(b),
                 els: None,
@@ -3210,7 +3210,7 @@ pub enum E { A, B(u8), C(u8, bool), D { x: u8 }, F(Vec<E>) }
 impl E { pub fn f(&self) -> NotLoaded { NotLoaded } }
 pub struct NotLoaded;
 impl Root { pub fn f(self) { m!() } }
-pub unsafe trait Tr {}
+pub auto trait Tr {}
 "#,
                     &["Tr"],
                     &[],
@@ -3220,7 +3220,7 @@ pub unsafe trait Tr {}
                     errors,
                     vec![
                         "/c/src/lib.rs:7: unsupported macro call `m!()`",
-                        "/c/src/lib.rs:8: unsupported trait `pub unsafe trait Tr {}`",
+                        "/c/src/lib.rs:8: unsupported trait `pub auto trait Tr {}`",
                         "/c/src/lib.rs:3: unsupported type `m!()`",
                         "/c/src/lib.rs:2: unsupported type `m!()`"
                     ]

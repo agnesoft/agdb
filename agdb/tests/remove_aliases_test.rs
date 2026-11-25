@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn remove_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -24,7 +24,7 @@ fn remove_aliases() {
 
 #[test]
 fn remove_aliases_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -46,13 +46,13 @@ fn remove_aliases_rollback() {
 
 #[test]
 fn remove_missing_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().aliases("alias").query(), 0);
 }
 
 #[test]
 fn remove_missing_alias_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().aliases("alias").query())?;

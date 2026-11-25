@@ -161,8 +161,7 @@ impl DbPool {
         remove_file_if_exists(&backup_path)?;
         std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
 
-        let db_guard = user_db.0.read().await;
-        db_guard.backup(backup_path.to_string_lossy().as_ref())?;
+        user_db.0.backup(backup_path.to_string_lossy().as_ref())?;
 
         audit::sync(
             &db_audit_dir(owner, db, &self.config),
@@ -200,7 +199,7 @@ impl DbPool {
     }
 
     pub(crate) async fn db_size(&self, owner: &str, db: &str) -> ServerResult<u64> {
-        Ok(self.db(owner, db).await?.size().await)
+        Ok(self.db(owner, db).await?.size())
     }
 
     async fn do_clear_db_backup(
@@ -276,11 +275,7 @@ impl DbPool {
     ) -> Result<(), ServerError> {
         let current_path = db_file(owner, db, &self.config);
         if db_type == DbKind::Memory {
-            user_db
-                .0
-                .read()
-                .await
-                .backup(current_path.to_string_lossy().as_ref())?;
+            user_db.0.backup(current_path.to_string_lossy().as_ref())?;
         }
         *user_db = UserDb::new(
             current_path.to_string_lossy().as_ref(),
@@ -312,23 +307,18 @@ impl DbPool {
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
 
         let target_db = DbName::new(new_owner, new_db);
-        let cloned_db;
+        let user_db = self.db(owner, db).await?;
+        let cloned_db = user_db.0.copy(target_file.to_string_lossy().as_ref())?;
 
-        {
-            let user_db = self.db(owner, db).await?;
-            let db_guard = user_db.0.read().await;
-            cloned_db = db_guard.copy(target_file.to_string_lossy().as_ref())?;
-
-            audit::sync(
-                &db_audit_dir(owner, db, &self.config),
-                &db_audit_dir(new_owner, new_db, &self.config),
-            )?;
-        }
+        audit::sync(
+            &db_audit_dir(owner, db, &self.config),
+            &db_audit_dir(new_owner, new_db, &self.config),
+        )?;
 
         self.pool
             .write()
             .await
-            .insert(target_db, UserDb(Arc::new(RwLock::new(cloned_db))));
+            .insert(target_db, UserDb(Arc::new(cloned_db)));
 
         Ok(())
     }
@@ -350,7 +340,7 @@ impl DbPool {
         db: &str,
         queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
-        self.db(owner, db).await?.exec(queries).await
+        self.db(owner, db).await?.exec(queries)
     }
 
     pub(crate) async fn exec_mut(
@@ -360,11 +350,7 @@ impl DbPool {
         username: &str,
         queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
-        let (r, audit) = self
-            .db(owner, db)
-            .await?
-            .exec_mut(queries, username)
-            .await?;
+        let (r, audit) = self.db(owner, db).await?.exec_mut(queries, username)?;
 
         if !audit.is_empty() {
             audit::append(&db_audit_dir(owner, db, &self.config), &audit)?;
@@ -375,7 +361,7 @@ impl DbPool {
 
     pub(crate) async fn optimize_db(&self, owner: &str, db: &str) -> ServerResult {
         let user_db = self.db(owner, db).await?;
-        user_db.optimize_storage().await?;
+        user_db.optimize_storage()?;
         Ok(())
     }
 
@@ -451,7 +437,6 @@ impl DbPool {
     ) -> Result<(), ServerError> {
         user_db
             .rename(target_name.to_string_lossy().as_ref())
-            .await
             .map_err(|mut e| {
                 e.status = ErrorCode::DbInvalid.into();
                 e

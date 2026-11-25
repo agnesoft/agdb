@@ -165,11 +165,12 @@ impl Load<'_> {
                 (&e.attrs, self.vis(&e.vis), kind)
             }
             syn::Item::Trait(t) => {
-                if t.modifiers.auto_token.is_some() || t.unsafety.is_some() {
+                if t.modifiers.auto_token.is_some() {
                     self.unsupported(t, "trait");
                 }
                 let generics = self.generics(&t.generics);
                 let kind = ItemKind::Trait(Trait {
+                    unsafety: t.unsafety.is_some(),
                     name: t.ident.to_string(),
                     generics,
                     supertraits: self.bounds(&t.supertraits),
@@ -178,14 +179,12 @@ impl Load<'_> {
                 (&t.attrs, self.vis(&t.vis), kind)
             }
             syn::Item::Impl(i) => {
-                if i.modifiers.defaultness.is_some()
-                    || i.modifiers.polarity.is_some()
-                    || i.unsafety.is_some()
-                {
+                if i.modifiers.defaultness.is_some() || i.modifiers.polarity.is_some() {
                     self.unsupported(i, "impl");
                 }
                 let generics = self.generics(&i.generics);
                 let kind = ItemKind::Impl(Impl {
+                    unsafety: i.unsafety.is_some(),
                     generics,
                     trait_: i.trait_.as_ref().map(|(path, _)| self.type_path(path)),
                     self_ty: self.ty(&i.self_ty),
@@ -996,6 +995,7 @@ impl Load<'_> {
                 op: self.op(&UnOp::ALL, UnOp::token, &u.op),
                 expr: self.boxed(&u.expr),
             },
+            syn::Expr::Unsafe(u) => Expr::Unsafe(self.block(&u.block)),
             syn::Expr::While(w) if w.label.is_none() => {
                 let scope = self.scope.len();
                 let cond = self.boxed(&w.cond);
@@ -1478,7 +1478,7 @@ mod tests {
     fn expr_paths(expr: &Expr) -> Vec<(String, Target)> {
         match expr {
             Expr::Path(p) => vec![named(p)],
-            Expr::Block(b) => block_paths(b),
+            Expr::Block(b) | Expr::Unsafe(b) => block_paths(b),
             Expr::If {
                 cond,
                 then_branch,
@@ -1554,6 +1554,11 @@ mod tests {
         b;
     }
     b;
+    unsafe {
+        let ub = a;
+        ub;
+    }
+    ub;
     if let c = a {
         c;
     } else {
@@ -1586,6 +1591,9 @@ mod tests {
                         ("a", local.clone()),
                         ("b", local.clone()),
                         ("b", unresolved.clone()),
+                        ("a", local.clone()),
+                        ("ub", local.clone()),
+                        ("ub", unresolved.clone()),
                         ("a", local.clone()),
                         ("c", local.clone()),
                         ("c", unresolved.clone()),
@@ -1806,6 +1814,7 @@ pub struct S<T> {
                                 vec![("a", generic("A")), ("b", unresolved("B"))]
                             ),
                         ],
+                        unsafety: false
                     })
                 );
             }
@@ -1821,12 +1830,8 @@ pub struct S<T> {
             #[test]
             fn ir_should_report_unsupported_constructs_and_leave_their_items_out() {
                 let cases = [
-                    ("unsafe trait T {}", "trait `unsafe trait T {}`"),
                     ("trait T { #![allow(x)] }", "attribute `#![allow(x)]`"),
-                    (
-                        "unsafe impl Send for S {}",
-                        "impl `unsafe impl Send for S {}`",
-                    ),
+                    ("auto trait T {}", "trait `auto trait T {}`"),
                     ("impl !Send for S {}", "impl `impl !Send for S {}`"),
                     ("const C<T>: u8 = 1;", "item `const C<T>: u8 = 1;`"),
                     ("static mut S: u8 = 0;", "static `static mut S: u8 = 0;`"),

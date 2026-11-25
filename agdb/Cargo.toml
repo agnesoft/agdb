@@ -23,6 +23,10 @@ harness = false
 name = "storage"
 harness = false
 
+[[bench]]
+name = "concurrent"
+harness = false
+
 [features]
 default = ["derive"]
 derive = ["dep:agdb_derive"]

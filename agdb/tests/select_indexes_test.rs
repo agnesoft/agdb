@@ -7,13 +7,13 @@ use test_db::TestDb;
 
 #[test]
 fn select_indexes_empty() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
 }
 
 #[test]
 fn select_indexes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 

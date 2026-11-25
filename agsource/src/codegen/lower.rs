@@ -1723,7 +1723,7 @@ impl<'a> Lower<'a> {
     /// A block or `if` of an `else` or an arm as statements.
     fn stmts(&mut self, e: &ir::Expr) -> Vec<Expr> {
         match e {
-            ir::Expr::Block(b) => self.block(b),
+            ir::Expr::Block(b) | ir::Expr::Unsafe(b) => self.block(b),
             e => vec![self.expr(e)],
         }
     }
@@ -1761,7 +1761,7 @@ impl<'a> Lower<'a> {
                     },
                 }
             }
-            ir::Expr::Block(b) => K::If {
+            ir::Expr::Block(b) | ir::Expr::Unsafe(b) => K::If {
                 cond: Expr::new(K::Lit(Lit::Bool(true))).boxed(),
                 then: self.block(b),
                 els: None,

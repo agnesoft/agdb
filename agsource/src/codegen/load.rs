@@ -170,6 +170,7 @@ impl Load<'_> {
                 }
                 let generics = self.generics(&t.generics);
                 let kind = ItemKind::Trait(Trait {
+                    unsafety: t.unsafety.is_some(),
                     name: t.ident.to_string(),
                     generics,
                     supertraits: self.bounds(&t.supertraits),
@@ -183,6 +184,7 @@ impl Load<'_> {
                 }
                 let generics = self.generics(&i.generics);
                 let kind = ItemKind::Impl(Impl {
+                    unsafety: i.unsafety.is_some(),
                     generics,
                     trait_: i.trait_.as_ref().map(|(path, _)| self.type_path(path)),
                     self_ty: self.ty(&i.self_ty),
@@ -993,7 +995,7 @@ impl Load<'_> {
                 op: self.op(&UnOp::ALL, UnOp::token, &u.op),
                 expr: self.boxed(&u.expr),
             },
-            syn::Expr::Unsafe(u) => Expr::Block(self.block(&u.block)),
+            syn::Expr::Unsafe(u) => Expr::Unsafe(self.block(&u.block)),
             syn::Expr::While(w) if w.label.is_none() => {
                 let scope = self.scope.len();
                 let cond = self.boxed(&w.cond);
@@ -1552,6 +1554,11 @@ mod tests {
         b;
     }
     b;
+    unsafe {
+        let ub = a;
+        ub;
+    }
+    ub;
     if let c = a {
         c;
     } else {
@@ -1584,6 +1591,9 @@ mod tests {
                         ("a", local.clone()),
                         ("b", local.clone()),
                         ("b", unresolved.clone()),
+                        ("a", local.clone()),
+                        ("ub", local.clone()),
+                        ("ub", unresolved.clone()),
                         ("a", local.clone()),
                         ("c", local.clone()),
                         ("c", unresolved.clone()),
@@ -1820,6 +1830,7 @@ pub struct S<T> {
             fn ir_should_report_unsupported_constructs_and_leave_their_items_out() {
                 let cases = [
                     ("trait T { #![allow(x)] }", "attribute `#![allow(x)]`"),
+                    ("auto trait T {}", "trait `auto trait T {}`"),
                     ("impl !Send for S {}", "impl `impl !Send for S {}`"),
                     ("const C<T>: u8 = 1;", "item `const C<T>: u8 = 1;`"),
                     ("static mut S: u8 = 0;", "static `static mut S: u8 = 0;`"),

@@ -369,11 +369,19 @@ impl<S: StorageData> ConcurrentRoot<S> {
             }
         }
 
+        // Push old pages to version store and update page_epochs BEFORE
+        // commit writes new data. This prevents a race where a reader
+        // sees new page data via the storage buffer but old page_epochs,
+        // and reads from committed storage instead of version store.
+        if self.epoch_reads {
+            self.pre_commit_mvcc(&dirty_pages, captured);
+        }
+
         // Commit through the existing Root/TransactionMut mechanism.
         transaction.commit().map_err(E::from)?;
 
         if self.epoch_reads {
-            self.post_commit(dirty_pages, captured);
+            self.post_commit(dirty_pages);
         }
 
         // Clear the resizing flag (if it was set). Must happen after
@@ -386,24 +394,21 @@ impl<S: StorageData> ConcurrentRoot<S> {
         Ok(result)
     }
 
-    /// After a successful commit: populate the version store, bump
-    /// epoch, update page epochs, update committed meta.
-    ///
-    /// `dirty_pages` — page numbers modified by the transaction (always
-    /// collected). `captured` — old page data (only collected when epoch
-    /// readers were active at capture time).
-    fn post_commit(&self, dirty_pages: Vec<u64>, captured: Vec<(u64, Vec<u8>)>) {
+    /// BEFORE commit: trim + push old pages to version store and update
+    /// page_epochs. This must run before `transaction.commit()` writes
+    /// new data, so epoch readers always see modified pages via
+    /// page_epochs and go to the version store for old data.
+    fn pre_commit_mvcc(&self, dirty_pages: &[u64], captured: Vec<(u64, Vec<u8>)>) {
         let new_epoch = self.epoch.load(Ordering::Relaxed) + 1;
 
         let page_epochs = unsafe { &mut *self.page_epochs.get() };
 
-        // Grow page_epochs if storage grew.
+        // Grow page_epochs if needed (before we index into it).
         // SAFETY: we hold write_mutex, no other writer can grow it,
         // and readers only access within their snapshot length.
         let root = unsafe { &*self.root.get() };
         let new_len = root.storage().len();
         let new_pages = new_len.div_ceil(1u64 << self.page_shift) as usize;
-
         if new_pages > page_epochs.len() {
             page_epochs.resize_with(new_pages, || AtomicU64::new(0));
         }
@@ -427,13 +432,39 @@ impl<S: StorageData> ConcurrentRoot<S> {
             self.versions.lock().unwrap().push(new_epoch, captured);
         }
 
-        // ALWAYS update per-page epochs for every modified page.
-        // This is critical: a reader that registers between our commit
-        // and the epoch bump MUST see the correct page_epochs so it
-        // knows which pages need the version store.
+        // Update per-page epochs for every modified page BEFORE the
+        // commit writes new data. This prevents the race where a
+        // reader sees new data via the storage buffer but old
+        // page_epochs, causing it to read from committed storage
+        // instead of the version store.
         //
         // SAFETY: we hold write_mutex. Epoch readers load these
         // atomically and only act on pages whose epoch > snap_epoch.
+        for &page in dirty_pages {
+            if (page as usize) < page_epochs.len() {
+                page_epochs[page as usize].store(new_epoch, Ordering::Release);
+            }
+        }
+    }
+
+    /// After a successful commit: bump epoch, update committed meta.
+    /// The version store and page_epochs were already handled by
+    /// `pre_commit_mvcc`.
+    fn post_commit(&self, dirty_pages: Vec<u64>) {
+        let new_epoch = self.epoch.load(Ordering::Relaxed) + 1;
+
+        // Grow page_epochs for newly allocated pages (commit may have
+        // added pages beyond what pre_commit_mvcc sized).
+        let page_epochs = unsafe { &mut *self.page_epochs.get() };
+        let root = unsafe { &*self.root.get() };
+        let new_len = root.storage().len();
+        let new_pages = new_len.div_ceil(1u64 << self.page_shift) as usize;
+        if new_pages > page_epochs.len() {
+            page_epochs.resize_with(new_pages, || AtomicU64::new(0));
+        }
+
+        // Update page_epochs for any pages that were newly created by
+        // commit (not in dirty_pages from before commit).
         for &page in &dirty_pages {
             if (page as usize) < page_epochs.len() {
                 page_epochs[page as usize].store(new_epoch, Ordering::Release);
@@ -442,10 +473,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
 
         // Update epoch, meta and storage_len under a single
         // committed_meta lock so that begin_read_epoch always sees a
-        // consistent triple.  Page epochs are already updated above
-        // (under write_mutex) with Release stores; the mutex Acquire
-        // in begin_read_epoch establishes the happens-before that
-        // makes those stores visible to readers.
+        // consistent triple.
         {
             let meta = unsafe { &*self.root.get() }.committed_meta_clone();
             let mut committed = self.committed_meta.lock().unwrap();
@@ -723,5 +751,119 @@ impl<S: StorageData> SnapshotView<'_, S> {
         }
 
         Ok(StorageSlice::Owned(buffer))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod version_store {
+        use super::*;
+
+        mod find {
+            use super::*;
+
+            #[test]
+            fn find_should_return_earliest_superseding_entry() {
+                let mut vs = VersionStore::new();
+                vs.push(2, vec![(0, vec![10, 11])]);
+                vs.push(5, vec![(0, vec![20, 21])]);
+                vs.push(8, vec![(0, vec![30, 31])]);
+
+                assert_eq!(vs.find(0, 1), Some(&[10, 11][..]));
+                assert_eq!(vs.find(0, 4), Some(&[20, 21][..]));
+                assert_eq!(vs.find(0, 7), Some(&[30, 31][..]));
+            }
+
+            #[test]
+            fn find_at_or_past_latest_should_return_none() {
+                let mut vs = VersionStore::new();
+                vs.push(2, vec![(0, vec![10])]);
+
+                assert_eq!(vs.find(0, 2), None);
+                assert_eq!(vs.find(0, 100), None);
+            }
+
+            #[test]
+            fn find_wrong_page_should_return_none() {
+                let mut vs = VersionStore::new();
+                vs.push(2, vec![(0, vec![10])]);
+
+                assert_eq!(vs.find(1, 0), None);
+            }
+
+            #[test]
+            fn find_empty_should_return_none() {
+                let vs = VersionStore::new();
+
+                assert_eq!(vs.find(0, 0), None);
+            }
+        }
+
+        mod trim {
+            use super::*;
+
+            #[test]
+            fn trim_should_remove_entries_at_or_below_oldest_epoch() {
+                let mut vs = VersionStore::new();
+                vs.push(1, vec![(0, vec![1])]);
+                vs.push(2, vec![(0, vec![2])]);
+                vs.push(5, vec![(0, vec![5])]);
+                vs.push(10, vec![(0, vec![10])]);
+
+                vs.trim(4);
+
+                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.find(0, 4), Some(&[5][..]));
+                assert_eq!(vs.find(0, 9), Some(&[10][..]));
+            }
+
+            #[test]
+            fn trim_all_should_leave_empty() {
+                let mut vs = VersionStore::new();
+                vs.push(1, vec![(0, vec![1])]);
+                vs.push(2, vec![(0, vec![2])]);
+
+                vs.trim(100);
+
+                assert!(vs.entries.is_empty());
+            }
+
+            #[test]
+            fn trim_zero_should_keep_all() {
+                let mut vs = VersionStore::new();
+                vs.push(5, vec![(0, vec![5])]);
+
+                vs.trim(0);
+
+                assert_eq!(vs.entries.len(), 1);
+            }
+        }
+
+        mod push {
+            use super::*;
+
+            #[test]
+            fn push_should_add_entries_for_each_page() {
+                let mut vs = VersionStore::new();
+
+                vs.push(3, vec![(0, vec![1, 2]), (5, vec![3, 4])]);
+
+                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.find(0, 2), Some(&[1, 2][..]));
+                assert_eq!(vs.find(5, 2), Some(&[3, 4][..]));
+            }
+
+            #[test]
+            fn push_multiple_epochs_same_page_should_keep_all() {
+                let mut vs = VersionStore::new();
+                vs.push(1, vec![(0, vec![10])]);
+                vs.push(2, vec![(0, vec![20])]);
+
+                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.find(0, 0), Some(&[10][..]));
+            }
+        }
     }
 }

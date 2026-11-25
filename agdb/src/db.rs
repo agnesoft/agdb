@@ -927,7 +927,7 @@ mod tests {
             let mut run = Run::new(seed);
 
             for step in 1..=MODEL_STEPS {
-                run.step(&mut db);
+                run.step(&db);
 
                 if step % every == 0 {
                     db = between(db, &run);
@@ -946,7 +946,7 @@ mod tests {
         /// after each failure that the database still holds the model.
         fn model_faults(fs_op: FsOp, config: StorageConfig, seed: u64) {
             let platform = Arc::new(test_platform());
-            let mut db = open(file(&platform), config);
+            let db = open(file(&platform), config);
             let mut run = Run::new(seed);
 
             for _ in 0..FAULT_STEPS {
@@ -957,7 +957,7 @@ mod tests {
                     results.extend([Some(ErrorKind::Other), None]);
                     platform.fs().set_io_errors(fs_op, "", results);
 
-                    let result = op.run(&mut db);
+                    let result = op.run(&db);
 
                     platform.fs().clear_faults();
 
@@ -1008,8 +1008,8 @@ mod tests {
                 let op = run.op();
                 let before = run.model.clone();
                 let platform = restored(&files);
-                let mut db = open(file(&platform), config);
-                let result = op.run(&mut db);
+                let db = open(file(&platform), config);
+                let result = op.run(&db);
                 run.apply(&op, &result);
                 run.check(&db, &format!("{op:?}"));
                 drop(db);
@@ -1021,12 +1021,12 @@ mod tests {
 
                 for nth in 0.. {
                     let platform = restored(&pre);
-                    let mut db = open(file(&platform), config);
+                    let db = open(file(&platform), config);
                     let mut results = vec![None; nth];
                     results.push(Some(ErrorKind::Other));
                     platform.fs().set_io_errors(FsOp::Write, "", results);
 
-                    let result = op.run(&mut db);
+                    let result = op.run(&db);
 
                     if !power_loss {
                         platform.fs().sync();
@@ -1071,10 +1071,10 @@ mod tests {
             path: &str,
         ) -> (bool, bool, DbValue, DbValue) {
             let platform = Arc::new(test_platform());
-            let mut db = inserted(storage(&platform), config);
+            let db = inserted(storage(&platform), config);
             fail_once(&platform, op, path);
 
-            let failed = modify(&mut db).is_err();
+            let failed = modify(&db).is_err();
 
             let poisoned = poisoned(&db);
             let current = value(&db);
@@ -1154,11 +1154,11 @@ mod tests {
             #[test]
             fn transaction_mut_should_commit_after_failed_commit() {
                 let platform = Arc::new(test_platform());
-                let mut db = inserted(file(&platform), StorageConfig::default());
+                let db = inserted(file(&platform), StorageConfig::default());
                 fail_once(&platform, FsOp::Write, NAME);
-                assert!(modify(&mut db).is_err());
+                assert!(modify(&db).is_err());
 
-                modify(&mut db).unwrap();
+                modify(&db).unwrap();
 
                 assert_eq!(value(&db), "modified".into());
                 drop(db);
@@ -1171,27 +1171,27 @@ mod tests {
             #[test]
             fn transaction_mut_should_return_query_error_after_failed_write() {
                 let platform = Arc::new(test_platform());
-                let mut db = inserted(file(&platform), config(SyncMode::None, 0));
+                let db = inserted(file(&platform), config(SyncMode::None, 0));
                 fail_once(&platform, FsOp::Write, NAME);
 
-                let err = modify(&mut db).unwrap_err();
+                let err = modify(&db).unwrap_err();
 
                 assert_eq!(err.description, "[Fs] simulated Write failure: /db");
                 assert!(!poisoned(&db));
                 assert_eq!(value(&db), "original".into());
-                modify(&mut db).unwrap();
+                modify(&db).unwrap();
                 assert_eq!(value(&db), "modified".into());
             }
 
             #[test]
             fn transaction_mut_failed_recovery_after_failed_commit_should_poison() {
                 let platform = Arc::new(test_platform());
-                let mut db = inserted(file(&platform), StorageConfig::default());
+                let db = inserted(file(&platform), StorageConfig::default());
                 platform
                     .fs()
                     .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
 
-                let err = modify(&mut db).unwrap_err();
+                let err = modify(&db).unwrap_err();
 
                 assert_eq!(err.ty, DbErrorType::Poisoned);
                 assert!(poisoned(&db));

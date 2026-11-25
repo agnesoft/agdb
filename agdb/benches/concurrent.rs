@@ -34,23 +34,12 @@ fn setup_db() -> DbMemory {
     // Insert nodes so reads have data to query
     db.transaction_mut(|t| -> Result<(), agdb::DbError> {
         let values: Vec<Vec<agdb::DbKeyValue>> = (0..WARM_UP_NODES)
-            .map(|i| {
-                vec![
-                    ("name", format!("user_{i}")).into(),
-                    ("score", i).into(),
-                ]
-            })
+            .map(|i| vec![("name", format!("user_{i}")).into(), ("score", i).into()])
             .collect();
         let ids = t
             .exec_mut(QueryBuilder::insert().nodes().values(values).query())?
             .ids();
-        t.exec_mut(
-            QueryBuilder::insert()
-                .edges()
-                .from("users")
-                .to(ids)
-                .query(),
-        )?;
+        t.exec_mut(QueryBuilder::insert().edges().from("users").to(ids).query())?;
         Ok(())
     })
     .unwrap();
@@ -65,15 +54,12 @@ fn setup_db() -> DbMemory {
 // ---- RwLock baseline -------------------------------------------------------
 
 fn rwlock_write(db: &RwLock<DbMemory>, i: u64) -> u64 {
-    let guard = db.write().unwrap();
+    let guard = db.read().unwrap();
     guard
         .exec_mut(
             QueryBuilder::insert()
                 .nodes()
-                .values([[
-                    ("name", format!("new_{i}")).into(),
-                    ("score", i).into(),
-                ]])
+                .values([[("name", format!("new_{i}")).into(), ("score", i).into()]])
                 .query(),
         )
         .unwrap()
@@ -111,9 +97,7 @@ fn rwlock_txn_read(db: &RwLock<DbMemory>, i: u64) -> u64 {
                         .query(),
                 )?
                 .result;
-            let r2 = t
-                .exec(QueryBuilder::select().ids("root").query())?
-                .result;
+            let r2 = t.exec(QueryBuilder::select().ids("root").query())?.result;
             Ok(r1 + r2)
         })
         .unwrap()
@@ -146,9 +130,7 @@ fn mvcc_txn_read(db: &DbMemory, i: u64) -> u64 {
                     .query(),
             )?
             .result;
-        let r2 = t
-            .exec(QueryBuilder::select().ids("root").query())?
-            .result;
+        let r2 = t.exec(QueryBuilder::select().ids("root").query())?.result;
         Ok(r1 + r2)
     })
     .unwrap()
@@ -158,10 +140,7 @@ fn mvcc_write(db: &DbMemory, i: u64) -> u64 {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values([[
-                ("name", format!("new_{i}")).into(),
-                ("score", i).into(),
-            ]])
+            .values([[("name", format!("new_{i}")).into(), ("score", i).into()]])
             .query(),
     )
     .unwrap()
@@ -433,7 +412,9 @@ fn main() {
     println!("╔══════════════════════════════════════════════════════════════════════════════╗");
     println!("║              agdb MVCC Concurrent Benchmark (DbMemory)                      ║");
     println!("║  Comparing: Arc<RwLock<Db>> (old)  vs  Arc<Db> (MVCC, new)                  ║");
-    println!("║  Duration: {BENCH_DURATION:?} per measurement, {WARM_UP_NODES} pre-loaded nodes + score index       ║");
+    println!(
+        "║  Duration: {BENCH_DURATION:?} per measurement, {WARM_UP_NODES} pre-loaded nodes + score index       ║"
+    );
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -497,10 +478,26 @@ fn main() {
             .max_by(|a, b| a.speedup.partial_cmp(&b.speedup).unwrap())
         {
             let label = match *category {
-                "pure_reads" => format!("Pure reads:     {:.2}× at {} threads", best.speedup, best.threads),
-                "mixed_rw" => format!("Mixed search:   {:.2}× at {} threads ({}R + 1W)", best.speedup, best.threads, best.threads - 1),
-                "mixed_txn" => format!("Mixed txn:      {:.2}× at {} threads ({}R + 1W)", best.speedup, best.threads, best.threads - 1),
-                "pure_writes" => format!("Pure writes:    {:.2}× at {} threads", best.speedup, best.threads),
+                "pure_reads" => format!(
+                    "Pure reads:     {:.2}× at {} threads",
+                    best.speedup, best.threads
+                ),
+                "mixed_rw" => format!(
+                    "Mixed search:   {:.2}× at {} threads ({}R + 1W)",
+                    best.speedup,
+                    best.threads,
+                    best.threads - 1
+                ),
+                "mixed_txn" => format!(
+                    "Mixed txn:      {:.2}× at {} threads ({}R + 1W)",
+                    best.speedup,
+                    best.threads,
+                    best.threads - 1
+                ),
+                "pure_writes" => format!(
+                    "Pure writes:    {:.2}× at {} threads",
+                    best.speedup, best.threads
+                ),
                 _ => unreachable!(),
             };
             println!("  {label}");

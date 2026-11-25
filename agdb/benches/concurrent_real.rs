@@ -105,13 +105,7 @@ fn evidence_write(db: &Db, i: u64) -> u64 {
                     .query(),
             )?
             .ids();
-        t.exec_mut(
-            QueryBuilder::insert()
-                .edges()
-                .from("root")
-                .to(ids)
-                .query(),
-        )?;
+        t.exec_mut(QueryBuilder::insert().edges().from("root").to(ids).query())?;
         Ok(1)
     })
     .unwrap()
@@ -159,9 +153,7 @@ fn cidb_select_app(db: &Db, i: u64) -> u64 {
     // Apps start around ID 15000 based on the probe
     let node_id = DbId(15000 + (i % 5000) as i64);
     db.exec(QueryBuilder::select().ids(node_id).query())
-        .unwrap_or_else(|_| {
-            db.exec(QueryBuilder::select().ids("root").query()).unwrap()
-        })
+        .unwrap_or_else(|_| db.exec(QueryBuilder::select().ids("root").query()).unwrap())
         .result
 }
 
@@ -206,13 +198,7 @@ fn cidb_write_insert(db: &Db, i: u64) -> u64 {
                     .query(),
             )?
             .ids();
-        t.exec_mut(
-            QueryBuilder::insert()
-                .edges()
-                .from("apps")
-                .to(ids)
-                .query(),
-        )?;
+        t.exec_mut(QueryBuilder::insert().edges().from("apps").to(ids).query())?;
         Ok(1)
     })
     .unwrap()
@@ -226,7 +212,7 @@ fn rwlock_read<F: Fn(&Db, u64) -> u64>(db: &RwLock<Db>, i: u64, f: F) -> u64 {
 }
 
 fn rwlock_write<F: Fn(&Db, u64) -> u64>(db: &RwLock<Db>, i: u64, f: F) -> u64 {
-    let guard = db.write().unwrap();
+    let guard = db.read().unwrap();
     f(&guard, i)
 }
 
@@ -234,6 +220,7 @@ fn rwlock_write<F: Fn(&Db, u64) -> u64>(db: &RwLock<Db>, i: u64, f: F) -> u64 {
 
 struct BenchResult {
     name: String,
+    #[allow(dead_code)]
     db_label: String,
     threads: usize,
     rwlock_ops: u64,
@@ -279,12 +266,7 @@ where
     (total, start.elapsed().as_millis() as u64)
 }
 
-fn run_mixed<R, W>(
-    reader_threads: usize,
-    duration: Duration,
-    read_op: R,
-    write_op: W,
-) -> (u64, u64)
+fn run_mixed<R, W>(reader_threads: usize, duration: Duration, read_op: R, write_op: W) -> (u64, u64)
 where
     R: Fn(u64) + Send + Sync + 'static,
     W: Fn(u64) + Send + Sync + 'static,
@@ -406,7 +388,11 @@ fn bench_evidence_mixed(reader_threads: usize) -> BenchResult {
 }
 
 fn bench_evidence_reads(threads: usize) -> BenchResult {
-    let db = Arc::new(RwLock::new(open_copy(EVIDENCE_PATH, "evidence", "rwlock_r")));
+    let db = Arc::new(RwLock::new(open_copy(
+        EVIDENCE_PATH,
+        "evidence",
+        "rwlock_r",
+    )));
     let (rwlock_ops, rwlock_ms) = {
         let db = db.clone();
         run_threaded(threads, BENCH_DURATION, move |i| {
@@ -575,13 +561,19 @@ fn main() {
     }
 
     println!();
-    println!("╔══════════════════════════════════════════════════════════════════════════════════╗");
+    println!(
+        "╔══════════════════════════════════════════════════════════════════════════════════╗"
+    );
     println!("║          agdb MVCC Benchmark — Real Production Databases                        ║");
     println!("║  Comparing: Arc<RwLock<Db>> (old)  vs  Arc<Db> (MVCC, new)                      ║");
     println!("║  evidence.bak: 12K nodes, 1.3M edges, 957 MB (EP evidence store)                ║");
     println!("║  cidb.bak:    119K nodes, 154K edges, 127 MB (CI database)                      ║");
-    println!("║  Duration: {BENCH_DURATION:?} per measurement, FileStorageMemoryMapped                         ║");
-    println!("╚══════════════════════════════════════════════════════════════════════════════════╝");
+    println!(
+        "║  Duration: {BENCH_DURATION:?} per measurement, FileStorageMemoryMapped                         ║"
+    );
+    println!(
+        "╚══════════════════════════════════════════════════════════════════════════════════╝"
+    );
 
     let mut results = Vec::new();
 
@@ -622,7 +614,12 @@ fn main() {
     // Summary
     println!();
     println!("── Summary (best speedup per category) ──────────────────────────────────────────");
-    for category in &["evidence_reads", "evidence_mixed", "cidb_reads", "cidb_mixed"] {
+    for category in &[
+        "evidence_reads",
+        "evidence_mixed",
+        "cidb_reads",
+        "cidb_mixed",
+    ] {
         if let Some(best) = results
             .iter()
             .filter(|r| r.name == *category)

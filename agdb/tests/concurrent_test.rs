@@ -847,7 +847,7 @@ fn writer_transaction_atomicity() {
 fn get_node_count(db: &DbMemory) -> u64 {
     db.exec(QueryBuilder::select().node_count().query())
         .unwrap()
-        .result as u64
+        .result
 }
 
 #[test]

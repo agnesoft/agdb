@@ -471,8 +471,8 @@ class AgdbApi {
     }
 }
 
-class AgdbApiError {
-    public function __construct(public int $status, public string $description) {}
+class AgdbApiError extends \Exception {
+    public function __construct(public int $status, public string $description) { parent::__construct($this->to_string()); }
 
     public function to_string(): string {
         return $this->status . ': ' . $this->description;

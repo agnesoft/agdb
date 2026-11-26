@@ -11,6 +11,6 @@
     "format:check": "prettier --plugin @prettier/plugin-php --check src tests \"examples/**/*.php\"",
     "lint:check": "composer -d ../.. install && php ../../vendor/bin/phpstan analyse --memory-limit=1G --level=9 -v src tests examples",
     "examples": "composer -d ../.. install && cargo build -r -p agdb_server && cargo run -r -p agdb_server --bin agdb_harness -- php -d include_path=../.. examples/server_client/src/index.php",
-    "test": "composer -d ../.. install && php ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text=coverage/coverage.txt --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml && node coverage.js"
+    "test": "composer -d ../.. install && cargo build -r -p agdb_server && cargo run -r -p agdb_server --bin agdb_harness -- php ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text=coverage/coverage.txt --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml && node coverage.js"
   }
 }

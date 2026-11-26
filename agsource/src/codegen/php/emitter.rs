@@ -13,6 +13,14 @@ use crate::codegen::print;
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
+/// `Result::unwrap_err` of a call that throws its error.
+const UNWRAP_ERR: &str = "function unwrap_err(callable $fn): mixed {
+    try { $fn(); }
+    catch (\\Throwable $e) { return $e; }
+    throw new \\RuntimeException(\"called `Result::unwrap_err()` on an `Ok` value\");
+}
+";
+
 mod client;
 mod types;
 
@@ -72,6 +80,8 @@ pub struct Emitter<'a> {
     /// The enums whose variants the tests build through the exported
     /// constructors.
     constructors: BTreeSet<String>,
+    /// The helpers the code calls, such as [`UNWRAP_ERR`].
+    helpers: BTreeSet<&'static str>,
 }
 
 impl<'a> Emitter<'a> {
@@ -93,6 +103,7 @@ impl<'a> Emitter<'a> {
             by_name: false,
             bounded: false,
             constructors: BTreeSet::new(),
+            helpers: BTreeSet::new(),
         }
     }
 
@@ -160,7 +171,14 @@ impl<'a> Emitter<'a> {
                 self.line(0, "");
             }
 
-            let test_name = to_camel_case(test);
+            // PHPUnit has no nested grouping like TS describe blocks, so
+            // the suite prefix is included in the method name to avoid
+            // collisions (e.g. admin_dashboard::add → testAdminDashboardAdd).
+            let full = match inner {
+                Some(group) => format!("{group}::{test}"),
+                None => test.to_owned(),
+            };
+            let test_name = to_camel_case(&full);
             self.current = f.name.clone();
             self.reassigned = reassigned(&f.body);
             self.line(1, &format!("public function test{test_name}(): void {{"));
@@ -170,7 +188,11 @@ impl<'a> Emitter<'a> {
 
         self.line(0, "}");
 
-        let head = self.php_header();
+        let mut head = self.php_header();
+        for h in &self.helpers {
+            head.push_str(h);
+            head.push('\n');
+        }
 
         Php {
             code: head + &self.out,
@@ -363,12 +385,15 @@ impl<'a> Emitter<'a> {
                 recv,
                 ..
             } => {
-                // PHP is synchronous, so unwrap_err is a try/catch.
-                let r = recv
-                    .as_deref()
-                    .map(|r| self.expr(r))
-                    .unwrap_or_default();
-                self.unsupported(&format!("unwrap_err({r})"))
+                // PHP is synchronous: unwrap_err wraps the call in a closure
+                // that a try/catch helper catches.
+                self.helpers.insert(UNWRAP_ERR);
+                let inner = recv.as_deref().map(|r| match &r.k {
+                    // Peel K::Await — PHP is sync, the call itself throws.
+                    K::Await(value) => self.expr(value),
+                    _ => self.expr(r),
+                }).unwrap_or_default();
+                format!("unwrap_err(fn() => {inner})")
             }
             K::Call { callee, recv, args } => self.call(callee, recv.as_deref(), args),
             K::Convert { value, to } => {
@@ -1158,8 +1183,12 @@ impl<'a> Emitter<'a> {
     }
 
     fn class(&mut self, c: &Class, _export: bool) {
-        self.line(0, &format!("class {} {{", c.name));
-
+        // A class whose name ends with `Error` is a Rust error type (it
+        // implements `std::error::Error`) and must extend `\Exception` in
+        // PHP so it can be thrown.
+        let is_error = c.name.ends_with("Error");
+        let extends = if is_error { " extends \\Exception" } else { "" };
+        self.line(0, &format!("class {}{extends} {{", c.name));
         if !c.fields.is_empty() {
             let fields: Vec<String> = c
                 .fields
@@ -1174,10 +1203,19 @@ impl<'a> Emitter<'a> {
                     }
                 })
                 .collect();
-            self.line(
-                1,
-                &format!("public function __construct({}) {{}}\n", fields.join(", ")),
-            );
+            if is_error {
+                // Error classes extend \Exception and must call the parent
+                // constructor so the standard message is set.
+                self.line(
+                    1,
+                    &format!("public function __construct({}) {{ parent::__construct($this->to_string()); }}\n", fields.join(", ")),
+                );
+            } else {
+                self.line(
+                    1,
+                    &format!("public function __construct({}) {{}}\n", fields.join(", ")),
+                );
+            }
         }
 
         self.by_name = self.m.clients.contains(&c.name);
@@ -1355,7 +1393,8 @@ fn is_block_statement(e: &Expr) -> bool {
 
 /// Convert snake_case to CamelCase for PHPUnit test method names.
 fn to_camel_case(s: &str) -> String {
-    s.split('_')
+    s.split(['_', ':'])
+        .filter(|w| !w.is_empty())
         .map(|word| {
             let mut chars = word.chars();
             match chars.next() {

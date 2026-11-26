@@ -17,7 +17,6 @@
     "build-studio": "turbo run agdb_studio#build"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "catalog:",
     "@playwright/test": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",

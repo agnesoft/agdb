@@ -839,3 +839,103 @@ fn writer_transaction_atomicity() {
         r.join().unwrap();
     }
 }
+
+// ---------------------------------------------------------------------------
+// Restore tests
+// ---------------------------------------------------------------------------
+
+fn get_node_count(db: &DbMemory) -> u64 {
+    db.exec(QueryBuilder::select().node_count().query())
+        .unwrap()
+        .result as u64
+}
+
+#[test]
+fn restore_should_replace_data() {
+    let db = DbMemory::new("").unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query())
+        .unwrap();
+    assert_eq!(get_node_count(&db), 5);
+
+    // Backup to a temp file.
+    let dir = std::env::temp_dir().join("agdb_restore_test_replace");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let backup_path = dir.join("backup.agdb");
+    db.backup(backup_path.to_str().unwrap()).unwrap();
+
+    // Insert more nodes AFTER the backup.
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query())
+        .unwrap();
+    assert_eq!(get_node_count(&db), 15);
+
+    // Restore from the backup — should revert to 5 nodes.
+    db.restore(backup_path.to_str().unwrap()).unwrap();
+    assert_eq!(get_node_count(&db), 5);
+
+    // The database is fully usable after restore.
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query())
+        .unwrap();
+    assert_eq!(get_node_count(&db), 8);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn restore_should_be_visible_to_new_readers() {
+    let db = Arc::new(DbMemory::new("").unwrap());
+    pre_grow(&db);
+
+    // Insert 10 aliased nodes.
+    for i in 0..10 {
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases(format!("node_{i}"))
+                .query(),
+        )
+        .unwrap();
+    }
+    assert_eq!(get_node_count(&db), 10);
+
+    // Backup.
+    let dir = std::env::temp_dir().join("agdb_restore_test_readers");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let backup_path = dir.join("backup.agdb");
+    db.backup(backup_path.to_str().unwrap()).unwrap();
+
+    // Insert more nodes.
+    db.exec_mut(QueryBuilder::insert().nodes().count(20).query())
+        .unwrap();
+    assert_eq!(get_node_count(&db), 30);
+
+    // Restore to 10 nodes.
+    db.restore(backup_path.to_str().unwrap()).unwrap();
+
+    // Concurrent readers should all see 10 nodes.
+    let barrier = Arc::new(Barrier::new(5));
+    let handles: Vec<_> = (0..4)
+        .map(|_| {
+            let db = db.clone();
+            let barrier = barrier.clone();
+            thread::spawn(move || {
+                barrier.wait();
+                let count = get_node_count(&db);
+                assert!(count >= 10, "reader saw {count} nodes, expected >= 10");
+            })
+        })
+        .collect();
+
+    barrier.wait();
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    // Write after restore works.
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query())
+        .unwrap();
+    assert_eq!(get_node_count(&db), 15);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}

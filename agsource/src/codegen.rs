@@ -12,6 +12,7 @@ mod load;
 pub mod lower;
 pub mod lowered;
 pub mod pass;
+pub mod php;
 pub mod print;
 pub mod routes;
 pub mod rust;

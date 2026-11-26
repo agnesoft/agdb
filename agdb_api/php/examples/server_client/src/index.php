@@ -2,45 +2,28 @@
 // Needed to load the libraries installed by composer
 require "vendor/autoload.php";
 
-use Agnesoft\AgdbApi\Api\AgdbApi;
-use Agnesoft\AgdbApi\Model\DbKind;
-use Agnesoft\AgdbApi\Model\UserLogin;
-use Agnesoft\AgdbApi\Model\UserCredentials;
+use Agnesoft\AgdbApi\AgdbApi;
+use Agnesoft\AgdbApi\CurlClient;
 use Agnesoft\AgdbApi\QueryBuilder;
 
-// Default config will look for the server at http://localhost:3000
-$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
-
-// Using GuzzleHttp client. You can use any other such as Symfony.
-$client = new AgdbApi(new GuzzleHttp\Client(), $config);
+// Create the client using the native cURL transport.
+$client = AgdbApi::new(new CurlClient(), "localhost:3000");
 
 // Runs the status query against the database
 // and throws if the server is not accessible.
 $client->status();
 
 // Login as server admin.
-$token = $client->userLogin(
-    new UserLogin(["username" => "admin", "password" => "admin"])
-);
-$client->getConfig()->setAccessToken($token);
+$client->user_login("admin", "admin");
 
-// Creat user "php_user1".
-$client->adminUserAdd(
-    "php_user1",
-    new UserCredentials(["password" => "php_user1"])
-);
+// Create user "php_user1".
+$client->admin_user_add("php_user1", "php_user1");
 
 // Login as "php_user1".
-$token = $client->userLogin(
-    new UserLogin([
-        "username" => "php_user1",
-        "password" => "php_user1",
-    ])
-);
-$client->getConfig()->setAccessToken($token);
+$client->user_login("php_user1", "php_user1");
 
 // Creates memory mapped database "db1" for user "php_user1".
-$client->dbAdd("php_user1", "db1", DbKind::MAPPED); // @phpstan-ignore argument.type
+$client->db_add("php_user1", "db1", "mapped");
 
 // Prepare the queries to be executed on the remote database.
 $queries = [
@@ -68,7 +51,7 @@ $queries = [
     // :2: Connect the root to the inserted nodes with edges referencing both from previous queries.
     QueryBuilder::insert()->edges()->from(":0")->to(":1")->query(),
 
-    // :3: Find a node starting at the "users" node (could also be ":0" in this instance) with specific username.
+    // :3: Find a node starting at the "users" node with specific username.
     QueryBuilder::select()
         ->search()
         ->from("users")
@@ -79,10 +62,10 @@ $queries = [
 ];
 
 // Execute the queries.
-$result = $client->dbExecMut("php_user1", "db1", $queries);
+$result = $client->db_exec_mut("php_user1", "db1", $queries);
 
 // Print the result of the last query.
-printf($result[3]);
+print_r($result[1][3]);
 
 // {
 //     "elements": [
@@ -104,7 +87,7 @@ printf($result[3]);
 //                         "String": "password"
 //                     },
 //                     "value": {
-//                         "String": "password456"
+//                         "String": "password123"
 //                     }
 //                 }
 //             ]

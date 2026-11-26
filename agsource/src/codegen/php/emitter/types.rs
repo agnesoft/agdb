@@ -339,7 +339,14 @@ impl Emitter<'_> {
             Ty::Float => "float".into(),
             Ty::Str => "string".into(),
             Ty::List(_) => "array".into(),
-            Ty::Option(inner) => format!("{}|null", self.wire_ty(inner)),
+            Ty::Option(inner) => {
+                let inner_ty = self.wire_ty(inner);
+                if inner_ty.starts_with("mixed") {
+                    inner_ty
+                } else {
+                    format!("{inner_ty}|null")
+                }
+            }
             Ty::Tuple(_) => "array".into(),
             Ty::Named(name, _) if self.m.wire.contains_key(name) => name.clone(),
             Ty::Param(p) => format!("mixed /* {p} */"),
@@ -357,7 +364,11 @@ impl Emitter<'_> {
                 Ty::Option(inner) => self.wire_ty(inner),
                 _ => self.wire_ty(ty),
             };
-            format!("{inner}|null")
+            if inner.starts_with("mixed") {
+                inner
+            } else {
+                format!("{inner}|null")
+            }
         } else {
             self.wire_ty(ty)
         }

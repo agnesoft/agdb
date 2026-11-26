@@ -121,6 +121,12 @@ pub(crate) const PHP_TYPES: &str = "agdb_api/php/src/types.php";
 /// The PHP client generated from [`API`], relative to the repository root.
 pub(crate) const PHP_API: &str = "agdb_api/php/src/api.php";
 
+/// The PHP tests of the builder API, relative to the repository root.
+const PHP_TESTS: &str = "agdb_api/php/tests/QueryBuilderTest.php";
+
+// TODO: PHP route tests need unwrap_err (try/catch) support in the emitter.
+// const PHP_ROUTES: &str = "agdb_api/php/tests/ApiTest.php";
+
 /// The query builder of the clients from the agdb source: the lowered module is dumped to `dump`
 /// after loading and after each pass as `NN_<pass>.rs.txt`.
 pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Result<(), CIError> {
@@ -239,6 +245,17 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(lowering);
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
     let fs = platform.fs();
+    let php_tests = PhpEmitter::new(&m, &php_config("")).tests(
+        "QueryBuilderTest",
+        "",
+        &[(DERIVED, "")],
+    );
+    // Route tests need unwrap_err (try/catch) support — not yet implemented.
+    // let php_route_tests = PhpEmitter::new(&routes, &php_config("types")).tests(
+    //     "ApiTest",
+    //     "",
+    //     &[(API, ""), (GLUE, "")],
+    // );
     let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(
         TESTS_NAME,
         TS_MODULE,
@@ -282,11 +299,13 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     fs.write(Path::new(root).join(PHP_TYPES), php_types.code)?;
     fs.write(Path::new(root).join(PHP), php_builder.code)?;
     fs.write(Path::new(root).join(PHP_API), php_client.code)?;
+    fs.write(Path::new(root).join(PHP_TESTS), php_tests.code)?;
     let php_unsupported: Vec<String> = php_types
         .unsupported
         .into_iter()
         .chain(php_builder.unsupported)
         .chain(php_client.unsupported)
+        .chain(php_tests.unsupported)
         .collect();
 
     if !php_unsupported.is_empty() {

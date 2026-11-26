@@ -128,7 +128,7 @@ impl<'a> Emitter<'a> {
             self.class(&m.classes[b], *b == m.root);
         }
 
-        let head = format!("{}\n\n", self.config.header);
+        let head = self.php_header();
 
         Php {
             code: head + &self.out,
@@ -170,7 +170,7 @@ impl<'a> Emitter<'a> {
 
         self.line(0, "}");
 
-        let head = format!("{}\n\n", self.config.header);
+        let head = self.php_header();
 
         Php {
             code: head + &self.out,
@@ -190,7 +190,14 @@ impl<'a> Emitter<'a> {
             Ty::Float => "float".into(),
             Ty::Str => "string".into(),
             Ty::List(_) => "array".into(),
-            Ty::Option(inner) => format!("{}|null", self.ty(inner)),
+            Ty::Option(inner) => {
+                let inner_ty = self.ty(inner);
+                if inner_ty == "mixed" {
+                    "mixed".into()
+                } else {
+                    format!("{inner_ty}|null")
+                }
+            }
             Ty::Tuple(_) => "array".into(),
             Ty::Named(name, _) if self.is_class(name) => name.clone(),
             Ty::Named(name, _) => name.clone(),
@@ -502,7 +509,22 @@ impl<'a> Emitter<'a> {
 
     fn intrinsic(&mut self, i: &Intrinsic, r: &str, a: &str, args: &[Expr]) -> String {
         match i {
-            Intrinsic::Push => format!("{r}[] = {a}"),
+            Intrinsic::Push => {
+                // If the receiver is a guarded expression (e.g. `($x ?? throw ...)`),
+                // PHP does not allow it in write context.  Unwrap the parenthesised
+                // null-coalescing guard and push to the left operand directly — the
+                // null case is unreachable at runtime because the builder always has
+                // at least one conditions layer.
+                if r.starts_with('(') && r.contains("?? throw") {
+                    let inner = r
+                        .strip_prefix('(')
+                        .and_then(|s| s.rsplit_once(" ?? throw"))
+                        .map_or(r.as_ref(), |(lhs, _)| lhs);
+                    format!("{inner}[] = {a}")
+                } else {
+                    format!("{r}[] = {a}")
+                }
+            }
             Intrinsic::Pop => format!("array_pop({r})"),
             Intrinsic::LastMut => format!("{r}[count({r}) - 1]"),
             Intrinsic::Len => format!("count({r})"),
@@ -614,6 +636,27 @@ impl<'a> Emitter<'a> {
             .map(|t| self.test(t))
             .collect::<Vec<_>>()
             .join(" && ")
+    }
+
+    /// The standard PHP file header: `<?php`, the generated comment, and the
+    /// namespace when configured.
+    fn php_header(&self) -> String {
+        let mut head = String::from("<?php\n");
+        head.push_str(&self.config.header);
+        head.push('\n');
+        if !self.config.namespace.is_empty() {
+            head.push('\n');
+            head.push_str(&format!("namespace {};\n", self.config.namespace));
+        }
+        if !self.config.types_require.is_empty() {
+            head.push('\n');
+            head.push_str(&format!(
+                "require_once __DIR__ . '/{}.php';\n",
+                self.config.types_require
+            ));
+        }
+        head.push('\n');
+        head
     }
 
     pub(crate) fn line(&mut self, indent: usize, line: &str) {
@@ -1107,7 +1150,7 @@ impl<'a> Emitter<'a> {
 
                 f.name = format!("{name}_{}", f.name);
                 self.this = "$self";
-                self.func(&f, 0, "function ");
+                self.func(&f, 0, "");
                 self.this = "$this";
                 self.out.push('\n');
             }

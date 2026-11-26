@@ -28,14 +28,14 @@ const SALT_LEN = 16;
 abstract class HttpClient {
     abstract public function delete(string $uri, string|null $token): int;
     abstract public function get(string $uri, string|null $token): array;
-    abstract public function post(string $uri, mixed|null $json, string|null $token): array;
-    abstract public function put(string $uri, mixed|null $json, string|null $token): int;
+    abstract public function post(string $uri, mixed $json, string|null $token): array;
+    abstract public function put(string $uri, mixed $json, string|null $token): int;
     public function exec(string $uri, $queries, string|null $token): array {
         return $this->post($uri, $queries, $token);
     }
 }
 
-function function DbKind_to_string(DbKind $self): string {
+function DbKind_to_string(DbKind $self): string {
     if (is_array($self) && array_key_exists('File', $self)) {
         return 'file';
     } elseif (is_array($self) && array_key_exists('Mapped', $self)) {
@@ -45,7 +45,7 @@ function function DbKind_to_string(DbKind $self): string {
     }
 }
 
-function function DbResource_to_string(DbResource $self): string {
+function DbResource_to_string(DbResource $self): string {
     if (is_array($self) && array_key_exists('All', $self)) {
         return 'all';
     } elseif (is_array($self) && array_key_exists('Db', $self)) {
@@ -57,7 +57,7 @@ function function DbResource_to_string(DbResource $self): string {
     }
 }
 
-function function DbUserRole_to_string(DbUserRole $self): string {
+function DbUserRole_to_string(DbUserRole $self): string {
     if (is_array($self) && array_key_exists('Admin', $self)) {
         return 'admin';
     } elseif (is_array($self) && array_key_exists('Read', $self)) {
@@ -67,7 +67,7 @@ function function DbUserRole_to_string(DbUserRole $self): string {
     }
 }
 
-function function LogLevelFilter_to_string(LogLevelFilter $self): string {
+function LogLevelFilter_to_string(LogLevelFilter $self): string {
     if (is_array($self) && array_key_exists('Off', $self)) {
         return 'off';
     } elseif (is_array($self) && array_key_exists('Error', $self)) {

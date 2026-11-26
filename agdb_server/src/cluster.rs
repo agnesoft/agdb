@@ -732,14 +732,12 @@ impl ClusterStorage {
         }
 
         let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
-        let new_db = agdb::Db::new(&db_path)?;
-        crate::utilities::log_migration(&db_path, &new_db);
-        *self.db.db.write().await = new_db;
+        self.db.db.restore(&db_path)?;
+        self.db.db.set_storage_config(config.storage);
 
         let log_path = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
-        let new_log_db = agdb::Db::new(&log_path)?;
-        crate::utilities::log_migration(&log_path, &new_log_db);
-        *self.cluster_log.0.write().await = new_log_db;
+        self.cluster_log.0.restore(&log_path)?;
+        self.cluster_log.0.set_storage_config(config.storage);
 
         let (index, term, commit) = self.cluster_log.cluster_log().await?;
         let logs = self.cluster_log.logs_unexecuted(commit).await?;
@@ -770,8 +768,12 @@ impl ClusterStorage {
     pub(crate) async fn close_handles(&mut self, temp_dir: &Path) -> ServerResult<()> {
         let _snapshot_guard = self.snapshot_lock.write().await;
         self.db_pool.clear().await;
-        swap_db(&self.db.db, temp_dir, "server").await?;
-        swap_db(&self.cluster_log.0, temp_dir, "log").await?;
+
+        let path = temp_dir.join("_placeholder_server.agdb");
+        self.db.db.restore(&path.to_string_lossy())?;
+
+        let path = temp_dir.join("_placeholder_log.agdb");
+        self.cluster_log.0.restore(&path.to_string_lossy())?;
 
         Ok(())
     }
@@ -916,13 +918,6 @@ impl ExecContext {
             &notes,
         );
     }
-}
-
-async fn swap_db(db: &Arc<RwLock<agdb::Db>>, temp_dir: &Path, name: &str) -> ServerResult<()> {
-    let placeholder_path = temp_dir.join(format!("_placeholder_{name}.agdb"));
-    let placeholder = agdb::Db::new(&placeholder_path.to_string_lossy())?;
-    *db.write().await = placeholder;
-    Ok(())
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {

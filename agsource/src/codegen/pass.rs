@@ -2,20 +2,27 @@
 //! the passes its target needs in [`Passes`], the built-in ones and its
 //! own.
 
+mod accept_element_sources;
 mod erase_newtypes;
 mod erase_ownership;
+mod erase_traits;
 mod explicit_returns;
 mod infer_empty_lists;
 mod inline;
 mod lower_conversions;
+mod omit_skipped_defaults;
 mod prune;
+mod remove_dead_helpers;
+mod rename_shadowed;
 mod resolve;
 mod tag_results;
 mod throw_errors;
 mod trait_dicts;
 
+pub use accept_element_sources::AcceptElementSources;
 pub use erase_newtypes::EraseNewtypes;
 pub use erase_ownership::EraseOwnership;
+pub use erase_traits::EraseTraits;
 pub use explicit_returns::ExplicitReturns;
 pub use explicit_returns::return_tail;
 pub use infer_empty_lists::InferEmptyLists;
@@ -23,7 +30,10 @@ pub use inline::Inline;
 pub use lower_conversions::LowerConversions;
 pub use lower_conversions::is_statement;
 pub use lower_conversions::normalizer;
+pub use omit_skipped_defaults::OmitSkippedDefaults;
 pub use prune::Prune;
+pub use remove_dead_helpers::RemoveDeadHelpers;
+pub use rename_shadowed::RenameShadowed;
 pub use resolve::Resolve;
 pub use resolve::returned_ty;
 pub use resolve::subst;

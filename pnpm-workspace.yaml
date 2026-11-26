@@ -3,7 +3,7 @@ packages:
 
 allowBuilds:
   "@nestjs/core": true
-  "@openapitools/openapi-generator-cli": true
+  '@openapitools/openapi-generator-cli': set this to true or false
   "@parcel/watcher": true
   "@scarf/scarf": true
   better-sqlite3: true
@@ -16,9 +16,7 @@ allowBuilds:
 catalog:
   "@eslint/js": ^10.0.1
   "@kalimahapps/vue-icons": ^1
-  "@openapitools/openapi-generator-cli": ^2
   "@playwright/test": ^1
-  playwright: ^1
   "@prettier/plugin-php": ^0.22
   "@rushstack/eslint-patch": ^1
   "@theguild/remark-mermaid": ^0.3
@@ -48,6 +46,7 @@ catalog:
   jsdom: ^30
   less: ^4
   npm-run-all2: ^9
+  playwright: ^1
   prettier: ^3.9.9
   sass: ^1
   turbo: ^2

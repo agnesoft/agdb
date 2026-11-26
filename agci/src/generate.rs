@@ -24,6 +24,8 @@ use agsource::codegen::pass::Resolve;
 use agsource::codegen::pass::TagResults;
 use agsource::codegen::pass::ThrowErrors;
 use agsource::codegen::pass::TraitDicts;
+use agsource::codegen::php::Emitter as PhpEmitter;
+use agsource::codegen::php::PhpConfig;
 use agsource::codegen::print;
 use agsource::codegen::routes;
 use agsource::codegen::ts::AcceptElementSources;
@@ -110,6 +112,21 @@ const SERVER_MAIN: &str = "src/main.rs";
 /// Where `agci generate` writes the routes each client method calls, in [`DUMP_DIR`].
 const ROUTE_CHECK_DUMP: &str = "route_check.txt";
 
+/// The PHP query builder, relative to the repository root.
+pub(crate) const PHP: &str = "agdb_api/php/src/query_builder.php";
+
+/// The PHP declarations of the serde types, relative to the repository root.
+pub(crate) const PHP_TYPES: &str = "agdb_api/php/src/types.php";
+
+/// The PHP client generated from [`API`], relative to the repository root.
+pub(crate) const PHP_API: &str = "agdb_api/php/src/api.php";
+
+/// The PHP tests of the builder API, relative to the repository root.
+const PHP_TESTS: &str = "agdb_api/php/tests/query_builder_test.php";
+
+/// The PHP route tests of the API client, relative to the repository root.
+const PHP_ROUTES: &str = "agdb_api/php/tests/api_test.php";
+
 /// The query builder of the clients from the agdb source: the lowered module is dumped to `dump`
 /// after loading and after each pass as `NN_<pass>.rs.txt`.
 pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Result<(), CIError> {
@@ -147,9 +164,11 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .collect::<Result<Vec<_>, _>>()?;
     let roots = Roots::of(&c, data)?;
 
+    // Lower the builder module and run the shared passes.
     let (mut m, mut errors) = c.lower(&roots);
     errors.extend(tests.lower_tests(&c, SOURCE, &mut m));
     errors.extend(api.lower_exported(&c, SOURCE, &mut m));
+    // The TS type declarations read the wire types before the passes erase newtypes.
     let declarations = Emitter::new(&m, &ts_config("")).types();
     let passes = Passes::new()
         .with(Resolve)
@@ -170,6 +189,7 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .with(RemoveDeadHelpers);
     run(platform, &mut m, &passes, dump, &mut errors)?;
 
+    // Lower the route tests and run their passes.
     let server_tests = load(
         SERVER,
         TargetKind::Test,
@@ -209,7 +229,11 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         &dump.join(ROUTES_DUMP),
         &mut errors,
     )?;
-    let (client, checked_m) = client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
+
+    // The TS client and route check.
+    let php_client_m = client_m.clone();
+    let (ts_client, checked_m) =
+        ts_client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
     let server = load(
         SERVER,
         TargetKind::Bin,
@@ -225,43 +249,18 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(lowering);
     let (checked, lowering) = routes::check(&checked_m, &[&defs], &transport, &served);
     errors.extend(lowering);
-    let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
-    let fs = platform.fs();
-    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(
-        TESTS_NAME,
-        TS_MODULE,
-        &[(DERIVED, TS_DERIVED)],
-    );
-    let routes = Emitter::new(&routes, &ts_config("../src/types.ts")).tests(
-        ROUTES,
-        TS_MODULE,
-        &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
-    );
-    fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
-    fs.write(dump.join(ROUTE_CHECK_DUMP), checked.dump())?;
-    fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
-    fs.write(Path::new(root).join(TS), ts.code)?;
-    fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
-    fs.write(Path::new(root).join(TS_API), client.code)?;
-    fs.write(Path::new(root).join(TS_ROUTES), routes.code)?;
-    fs.write(Path::new(root).join(TS_INDEX), index(&ts.values))?;
-    let unsupported: Vec<String> = declarations
-        .unsupported
-        .into_iter()
-        .chain(ts.unsupported)
-        .chain(client.unsupported)
-        .chain(tests.unsupported)
-        .chain(routes.unsupported)
-        .collect();
 
-    if !unsupported.is_empty() {
-        return Err(format!(
-            "generate: {} expressions without a TS form:\n{}",
-            unsupported.len(),
-            unsupported.join("\n")
-        )
-        .into());
-    }
+    emit_ts(
+        platform,
+        root,
+        dump,
+        &m,
+        &routes,
+        declarations,
+        ts_client,
+        &checked,
+    )?;
+    emit_php(platform, root, dump, &m, &routes, php_client_m, &mut errors)?;
 
     if errors.is_empty() {
         return Ok(());
@@ -278,6 +277,197 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     )
     .into())
 }
+
+// ── TypeScript ───────────────────────────────────────────────────────────
+
+/// Emits and writes the TypeScript files from the lowered modules.
+#[allow(clippy::too_many_arguments)]
+fn emit_ts(
+    platform: &impl Platform,
+    root: &str,
+    dump: &Path,
+    m: &Module,
+    routes: &Module,
+    declarations: agsource::codegen::ts::Ts,
+    ts_client: agsource::codegen::ts::Ts,
+    checked: &routes::Checked,
+) -> Result<(), CIError> {
+    let ts = Emitter::new(m, &ts_config("./types.ts")).module();
+    let tests = Emitter::new(m, &ts_config("../src/types.ts")).tests(
+        TESTS_NAME,
+        TS_MODULE,
+        &[(DERIVED, TS_DERIVED)],
+    );
+    let route_tests = Emitter::new(routes, &ts_config("../src/types.ts")).tests(
+        ROUTES,
+        TS_MODULE,
+        &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
+    );
+
+    let fs = platform.fs();
+    fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
+    fs.write(dump.join(ROUTE_CHECK_DUMP), checked.dump())?;
+    fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
+    fs.write(Path::new(root).join(TS), ts.code)?;
+    fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
+    fs.write(Path::new(root).join(TS_API), ts_client.code)?;
+    fs.write(Path::new(root).join(TS_ROUTES), route_tests.code)?;
+    fs.write(Path::new(root).join(TS_INDEX), index(&ts.values))?;
+
+    let unsupported: Vec<String> = declarations
+        .unsupported
+        .into_iter()
+        .chain(ts.unsupported)
+        .chain(ts_client.unsupported)
+        .chain(tests.unsupported)
+        .chain(route_tests.unsupported)
+        .collect();
+
+    if !unsupported.is_empty() {
+        return Err(format!(
+            "generate: {} expressions without a TS form:\n{}",
+            unsupported.len(),
+            unsupported.join("\n")
+        )
+        .into());
+    }
+
+    Ok(())
+}
+
+/// The TS client module `m` after its passes, dumped to `dump`, and the module
+/// after [`Inline`], with the URLs and the types of its requests.
+fn ts_client(
+    platform: &impl Platform,
+    mut m: Module,
+    dump: &Path,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(agsource::codegen::ts::Ts, Module), CIError> {
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline);
+    run(platform, &mut m, &passes, dump, errors)?;
+    let inlined = m.clone();
+    let passes = Passes::new()
+        .with(EraseOwnership)
+        .with(ThrowErrors)
+        .with(EraseCasts)
+        .with(RemoveDeadHelpers);
+    run_from(platform, &mut m, &passes, dump, 5, errors)?;
+    Ok((Emitter::new(&m, &ts_config("./types.ts")).client(), inlined))
+}
+
+/// [`TS_INDEX`]: the builder's `values` are exported by name, as [`TS_TYPES`] exports their types
+/// too.
+fn index(values: &[String]) -> String {
+    let module = |path: &str| {
+        let stem = Path::new(path).file_stem().unwrap_or_default();
+        format!("./{}", stem.to_string_lossy())
+    };
+    let (types, builder, api) = (module(TS_TYPES), module(TS), module(TS_API));
+    let values = values.join(", ");
+    format!(
+        "{header}\n\nexport type * from \"{types}.ts\";\nexport * from \"{builder}.js\";\n\
+         export {{ {values} }} from \"{builder}.js\";\nexport * from \"{api}.js\";\n\
+         export * from {TS_TRANSPORT:?};\n",
+        header = ts_config("").header
+    )
+}
+
+/// The serde types are imported from [`TS_TYPES`] at `types`, relative to the emitted file.
+fn ts_config(types: &str) -> TsConfig {
+    TsConfig {
+        header: format!("// GENERATED by `agci generate` from {SOURCE} and {API}. DO NOT EDIT."),
+        import: format!("import type * as types from {types:?};"),
+        schemas: "types".into(),
+    }
+}
+
+// ── PHP ──────────────────────────────────────────────────────────────────
+
+/// Emits and writes the PHP files from the lowered modules, then formats them.
+fn emit_php(
+    platform: &impl Platform,
+    root: &str,
+    dump: &Path,
+    m: &Module,
+    routes: &Module,
+    client_m: Module,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(), CIError> {
+    let php_types = PhpEmitter::new(m, &php_config("")).types();
+    let php_builder = PhpEmitter::new(m, &php_config("types")).module();
+    let php_client = php_client(platform, client_m, &dump.join("php_client"), errors)?;
+    let php_tests =
+        PhpEmitter::new(m, &php_config("")).tests("QueryBuilderTest", "", &[(DERIVED, "")]);
+    let php_route_tests = PhpEmitter::new(routes, &php_config("test_server")).tests(
+        "ApiTest",
+        "",
+        &[(API, ""), (GLUE, "")],
+    );
+
+    let fs = platform.fs();
+    fs.write(Path::new(root).join(PHP_TYPES), php_types.code)?;
+    fs.write(Path::new(root).join(PHP), php_builder.code)?;
+    fs.write(Path::new(root).join(PHP_API), php_client.code)?;
+    fs.write(Path::new(root).join(PHP_TESTS), php_tests.code)?;
+    fs.write(Path::new(root).join(PHP_ROUTES), php_route_tests.code)?;
+
+    let unsupported: Vec<String> = php_types
+        .unsupported
+        .into_iter()
+        .chain(php_builder.unsupported)
+        .chain(php_client.unsupported)
+        .chain(php_tests.unsupported)
+        .chain(php_route_tests.unsupported)
+        .collect();
+
+    if !unsupported.is_empty() {
+        return Err(format!(
+            "generate: {} expressions without a PHP form:\n{}",
+            unsupported.len(),
+            unsupported.join("\n")
+        )
+        .into());
+    }
+
+    Ok(())
+}
+
+/// The PHP client module `m` after its passes, dumped to `dump`.
+fn php_client(
+    platform: &impl Platform,
+    mut m: Module,
+    dump: &Path,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<agsource::codegen::php::Php, CIError> {
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline);
+    run(platform, &mut m, &passes, dump, errors)?;
+    let passes = Passes::new()
+        .with(EraseOwnership)
+        .with(ThrowErrors)
+        .with(EraseCasts)
+        .with(RemoveDeadHelpers);
+    run_from(platform, &mut m, &passes, dump, 5, errors)?;
+    Ok(PhpEmitter::new(&m, &php_config("types")).client())
+}
+
+/// The PHP config: the namespace and optional types require path.
+fn php_config(types: &str) -> PhpConfig {
+    PhpConfig {
+        header: format!("// GENERATED by `agci generate` from {SOURCE} and {API}. DO NOT EDIT."),
+        namespace: "Agnesoft\\AgdbApi".into(),
+        types_require: types.into(),
+    }
+}
+
+// ── Pass runner ──────────────────────────────────────────────────────────
 
 /// `m` after `passes`, dumped to `dump` after loading and after each pass as
 /// `NN_<pass>.rs.txt`.
@@ -323,55 +513,5 @@ fn run_from(
     match failed {
         Some(e) => Err(e.into()),
         None => Ok(()),
-    }
-}
-
-/// The client module `m` after its passes, dumped to `dump`, and the module
-/// after [`Inline`], with the URLs and the types of its requests.
-fn client(
-    platform: &impl Platform,
-    mut m: Module,
-    dump: &Path,
-    errors: &mut Vec<agsource::Error>,
-) -> Result<(agsource::codegen::ts::Ts, Module), CIError> {
-    let passes = Passes::new()
-        .with(Resolve)
-        .with(Prune)
-        .with(ExplicitReturns)
-        .with(Inline);
-    run(platform, &mut m, &passes, dump, errors)?;
-    let inlined = m.clone();
-    let passes = Passes::new()
-        .with(EraseOwnership)
-        .with(ThrowErrors)
-        .with(EraseCasts)
-        .with(RemoveDeadHelpers);
-    run_from(platform, &mut m, &passes, dump, 5, errors)?;
-    Ok((Emitter::new(&m, &ts_config("./types.ts")).client(), inlined))
-}
-
-/// [`TS_INDEX`]: the builder's `values` are exported by name, as [`TS_TYPES`] exports their types
-/// too.
-fn index(values: &[String]) -> String {
-    let module = |path: &str| {
-        let stem = Path::new(path).file_stem().unwrap_or_default();
-        format!("./{}", stem.to_string_lossy())
-    };
-    let (types, builder, api) = (module(TS_TYPES), module(TS), module(TS_API));
-    let values = values.join(", ");
-    format!(
-        "{header}\n\nexport type * from \"{types}.ts\";\nexport * from \"{builder}.js\";\n\
-         export {{ {values} }} from \"{builder}.js\";\nexport * from \"{api}.js\";\n\
-         export * from {TS_TRANSPORT:?};\n",
-        header = ts_config("").header
-    )
-}
-
-/// The serde types are imported from [`TS_TYPES`] at `types`, relative to the emitted file.
-fn ts_config(types: &str) -> TsConfig {
-    TsConfig {
-        header: format!("// GENERATED by `agci generate` from {SOURCE} and {API}. DO NOT EDIT."),
-        import: format!("import type * as types from {types:?};"),
-        schemas: "types".into(),
     }
 }

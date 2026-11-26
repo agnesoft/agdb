@@ -84,14 +84,14 @@ fn dbs() -> Dbs {
 macro_rules! targets {
     ($bench:expr, $op:ident) => {
         $bench
-            .target("memory", |d| $op(&mut d.memory, &mut d.counters[0]))
-            .target("mapped", |d| $op(&mut d.mapped, &mut d.counters[1]))
-            .target("file", |d| $op(&mut d.file, &mut d.counters[2]))
+            .target("memory", |d| $op(&d.memory, &mut d.counters[0]))
+            .target("mapped", |d| $op(&d.mapped, &mut d.counters[1]))
+            .target("file", |d| $op(&d.file, &mut d.counters[2]))
             .run()
     };
 }
 
-fn node<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) -> Vec<DbId> {
+fn node<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) -> Vec<DbId> {
     *counter += 1;
     db.exec_mut(
         QueryBuilder::insert()
@@ -114,7 +114,7 @@ fn insert_indexed_node(bench: &mut Bench) {
     );
 }
 
-fn edge<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn edge<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     *counter += 1;
     let to = DbId(2 + (*counter % NODES) as i64);
     db.exec_mut(QueryBuilder::insert().edges().from("root").to(to).query())
@@ -125,7 +125,7 @@ fn insert_edge(bench: &mut Bench) {
     targets!(bench.benchmark("db/insert_edge", dbs), edge);
 }
 
-fn update<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn update<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     *counter += 1;
     let id = DbId(2 + (*counter % NODES) as i64);
     db.exec_mut(
@@ -141,7 +141,7 @@ fn update_value(bench: &mut Bench) {
     targets!(bench.benchmark("db/update_value", dbs), update);
 }
 
-fn update_resize<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn update_resize<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     *counter += 1;
     let id = DbId(2 + (*counter % NODES) as i64);
     let name = "x".repeat(16 + (*counter % 64) as usize);
@@ -161,7 +161,7 @@ fn update_value_resize(bench: &mut Bench) {
     );
 }
 
-fn insert_remove<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn insert_remove<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     let ids = node(db, counter);
     db.exec_mut(QueryBuilder::remove().ids(ids).query())
         .unwrap();
@@ -171,7 +171,7 @@ fn insert_remove_node(bench: &mut Bench) {
     targets!(bench.benchmark("db/insert_remove_node", dbs), insert_remove);
 }
 
-fn large<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn large<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     *counter += 1;
     db.exec_mut(
         QueryBuilder::insert()
@@ -186,7 +186,7 @@ fn insert_large_value(bench: &mut Bench) {
     targets!(bench.benchmark("db/insert_64kib_value", dbs), large);
 }
 
-fn transaction<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn transaction<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     *counter += 100;
     let start = *counter;
     db.transaction_mut(|t| -> Result<(), agdb::DbError> {
@@ -205,7 +205,7 @@ fn transaction_nodes_edges(bench: &mut Bench) {
     );
 }
 
-fn bulk<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) -> Vec<DbId> {
+fn bulk<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) -> Vec<DbId> {
     *counter += NODES;
     let start = *counter;
     let nodes: Vec<Vec<DbKeyValue>> = (start..start + NODES).map(values).collect();
@@ -218,7 +218,7 @@ fn insert_nodes_bulk(bench: &mut Bench) {
     targets!(bench.benchmark("db/insert_1000_nodes", dbs), bulk);
 }
 
-fn bulk_remove<S: StorageData>(db: &mut DbImpl<S>, counter: &mut u64) {
+fn bulk_remove<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) {
     let ids = bulk(db, counter);
     db.exec_mut(QueryBuilder::remove().ids(ids).query())
         .unwrap();

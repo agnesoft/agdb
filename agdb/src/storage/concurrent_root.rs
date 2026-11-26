@@ -29,34 +29,30 @@ use std::sync::{Mutex, RwLock};
 // Version store
 // ---------------------------------------------------------------------------
 
-/// A single old-page entry saved before a commit overwrites the page.
-struct VersionEntry {
-    /// The epoch at which this old content was superseded.
-    epoch: u64,
-    /// The page number (byte offset = `page << page_shift`).
-    page: u64,
-    /// The old page content.
-    data: Vec<u8>,
-}
+use std::collections::HashMap;
 
 /// Holds old page contents for active reader snapshots.
+///
+/// Keyed by page number; each page maps to a `Vec` of `(epoch, data)`
+/// pairs in ascending epoch order (writers always push with monotonically
+/// increasing epochs).  `find` uses `partition_point` for O(log V)
+/// lookup where V is the number of versions for a single page (typically
+/// 1–3), eliminating the previous O(N) scan over all pages.
 struct VersionStore {
-    entries: Vec<VersionEntry>,
+    entries: HashMap<u64, Vec<(u64, Vec<u8>)>>,
 }
 
 impl VersionStore {
     fn new() -> Self {
         Self {
-            entries: Vec::new(),
+            entries: HashMap::new(),
         }
     }
 
     /// Push entries for the pages replaced by the commit at `epoch`.
     fn push(&mut self, epoch: u64, captured: Vec<(u64, Vec<u8>)>) {
-        self.entries
-            .reserve(captured.len().saturating_sub(self.entries.capacity()));
         for (page, data) in captured {
-            self.entries.push(VersionEntry { epoch, page, data });
+            self.entries.entry(page).or_default().push((epoch, data));
         }
     }
 
@@ -65,27 +61,25 @@ impl VersionStore {
     /// greater than `snap_epoch` (that version replaced the page the
     /// reader should see).
     fn find(&self, page: u64, snap_epoch: u64) -> Option<&[u8]> {
-        // We want the entry where entry.epoch > snap_epoch with the
-        // smallest epoch (the first commit after the reader started).
-        let mut best: Option<&VersionEntry> = None;
-
-        for entry in &self.entries {
-            if entry.page == page && entry.epoch > snap_epoch {
-                match best {
-                    Some(b) if entry.epoch < b.epoch => best = Some(entry),
-                    None => best = Some(entry),
-                    _ => {}
-                }
-            }
-        }
-
-        best.map(|e| e.data.as_slice())
+        let page_entries = self.entries.get(&page)?;
+        // Entries are in epoch order. Find the first with epoch > snap_epoch.
+        let idx = page_entries.partition_point(|(e, _)| *e <= snap_epoch);
+        page_entries.get(idx).map(|(_, data)| data.as_slice())
     }
 
     /// Remove entries no longer needed: those whose epoch is ≤ the
-    /// oldest active reader epoch.
+    /// oldest active reader epoch. Empty pages are removed from the map.
     fn trim(&mut self, oldest_epoch: u64) {
-        self.entries.retain(|e| e.epoch > oldest_epoch);
+        self.entries.retain(|_, versions| {
+            versions.retain(|(e, _)| *e > oldest_epoch);
+            !versions.is_empty()
+        });
+    }
+
+    /// Total number of version entries across all pages.
+    #[cfg(test)]
+    fn total_entries(&self) -> usize {
+        self.entries.values().map(|v| v.len()).sum()
     }
 }
 
@@ -364,9 +358,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
             // in write mode via _rguard), so fallback readers will wait
             // until we finish the commit and _rguard drops.
             self.resizing.store(true, Ordering::Release);
-            while self.active_readers.load(Ordering::Acquire) > 0 {
-                std::hint::spin_loop();
-            }
+            self.drain_epoch_readers();
         }
 
         // Push old pages to version store and update page_epochs BEFORE
@@ -517,11 +509,12 @@ impl<S: StorageData> ConcurrentRoot<S> {
             .write()
             .expect("ConcurrentRoot read_lock poisoned");
 
-        // Wait for epoch readers before mutating root.
+        // Wait for epoch readers before mutating root. Set the
+        // resizing flag so that new epoch readers fall back to the
+        // locked path (which blocks on read_lock we hold).
         if self.epoch_reads {
-            while self.active_readers.load(Ordering::Acquire) > 0 {
-                std::hint::spin_loop();
-            }
+            self.resizing.store(true, Ordering::Release);
+            self.drain_epoch_readers();
         }
 
         let root = unsafe { &mut *self.root.get() };
@@ -531,9 +524,40 @@ impl<S: StorageData> ConcurrentRoot<S> {
         // so refresh all MVCC state from the current root.
         if self.epoch_reads {
             self.refresh_mvcc_state();
+            self.resizing.store(false, Ordering::Release);
         }
 
         Ok(result)
+    }
+
+    /// Spin-waits until all epoch-based readers have finished.
+    ///
+    /// Must be called with `resizing` already set to `true` and both
+    /// `write_mutex` and `read_lock` held.  Uses progressive backoff:
+    /// spin-loop for the first batch, then [`std::thread::yield_now`].
+    /// Panics after 10 seconds if readers never drain (indicates a leaked
+    /// reader guard).
+    fn drain_epoch_readers(&self) {
+        const SPIN_ITERS: u32 = 64;
+        const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+        let deadline = std::time::Instant::now() + TIMEOUT;
+        let mut i = 0u32;
+        while self.active_readers.load(Ordering::Acquire) > 0 {
+            if i < SPIN_ITERS {
+                std::hint::spin_loop();
+                i += 1;
+            } else {
+                std::thread::yield_now();
+                if std::time::Instant::now() >= deadline {
+                    panic!(
+                        "ConcurrentRoot: timed out ({TIMEOUT:?}) waiting for {} \
+                         epoch reader(s) to drain",
+                        self.active_readers.load(Ordering::Relaxed),
+                    );
+                }
+            }
+        }
     }
 
     /// Resets all MVCC bookkeeping from the current root state.
@@ -560,7 +584,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
         }
 
         // Clear version store.
-        self.versions.lock().unwrap().entries.clear();
+        self.versions.lock().unwrap().entries.clear();  // HashMap::clear()
     }
 
     /// Atomically replaces the internal [`Root`] (and its storage) with
@@ -592,9 +616,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
         // Wait for epoch readers (same protocol as with_root_mut).
         if self.epoch_reads {
             self.resizing.store(true, Ordering::Release);
-            while self.active_readers.load(Ordering::Acquire) > 0 {
-                std::hint::spin_loop();
-            }
+            self.drain_epoch_readers();
         }
 
         if self.epoch_reads {
@@ -615,10 +637,6 @@ impl<S: StorageData> ConcurrentRoot<S> {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn into_storage(self) -> S {
-        self.root.into_inner().into_storage()
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -866,7 +884,7 @@ mod tests {
 
                 vs.trim(4);
 
-                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.total_entries(), 2);
                 assert_eq!(vs.find(0, 4), Some(&[5][..]));
                 assert_eq!(vs.find(0, 9), Some(&[10][..]));
             }
@@ -879,7 +897,7 @@ mod tests {
 
                 vs.trim(100);
 
-                assert!(vs.entries.is_empty());
+                assert_eq!(vs.total_entries(), 0);
             }
 
             #[test]
@@ -889,7 +907,7 @@ mod tests {
 
                 vs.trim(0);
 
-                assert_eq!(vs.entries.len(), 1);
+                assert_eq!(vs.total_entries(), 1);
             }
         }
 
@@ -902,7 +920,7 @@ mod tests {
 
                 vs.push(3, vec![(0, vec![1, 2]), (5, vec![3, 4])]);
 
-                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.total_entries(), 2);
                 assert_eq!(vs.find(0, 2), Some(&[1, 2][..]));
                 assert_eq!(vs.find(5, 2), Some(&[3, 4][..]));
             }
@@ -913,7 +931,7 @@ mod tests {
                 vs.push(1, vec![(0, vec![10])]);
                 vs.push(2, vec![(0, vec![20])]);
 
-                assert_eq!(vs.entries.len(), 2);
+                assert_eq!(vs.total_entries(), 2);
                 assert_eq!(vs.find(0, 0), Some(&[10][..]));
             }
         }

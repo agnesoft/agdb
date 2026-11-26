@@ -563,58 +563,6 @@ impl<S: StorageData> ConcurrentRoot<S> {
         self.versions.lock().unwrap().entries.clear();
     }
 
-    /// Atomically replaces the internal [`Root`] (and its storage) with
-    /// `new_root`.  Acquires exclusive access exactly like a write
-    /// transaction, waits for all epoch readers to drain, then swaps.
-    /// The old `Root` is dropped — releasing file handles / memory maps.
-    /// All MVCC bookkeeping is reset via [`refresh_mvcc_state`].
-    ///
-    /// Returns an error when the new root has a different `page_shift`
-    /// (the field is not atomic and must stay invariant while readers
-    /// can observe it).
-    pub(crate) fn restore(&self, mut new_root: Root<S>) -> Result<(), DbError> {
-        if new_root.page_shift() != self.page_shift {
-            return Err(DbError::storage(
-                DbErrorType::NotAllowed,
-                "restore: page shift mismatch".to_string(),
-            ));
-        }
-
-        let _wguard = self
-            .write_mutex
-            .lock()
-            .expect("ConcurrentRoot write_mutex poisoned");
-        let _rguard = self
-            .read_lock
-            .write()
-            .expect("ConcurrentRoot read_lock poisoned");
-
-        // Wait for epoch readers (same protocol as with_root_mut).
-        if self.epoch_reads {
-            self.resizing.store(true, Ordering::Release);
-            while self.active_readers.load(Ordering::Acquire) > 0 {
-                std::hint::spin_loop();
-            }
-        }
-
-        if self.epoch_reads {
-            new_root.storage_mut().disable_spill();
-        }
-
-        // Replace the root — dropping the old storage.
-        let root = unsafe { &mut *self.root.get() };
-        *root = new_root;
-
-        // Reset all MVCC bookkeeping from the new root.
-        self.refresh_mvcc_state();
-
-        if self.epoch_reads {
-            self.resizing.store(false, Ordering::Release);
-        }
-
-        Ok(())
-    }
-
     #[allow(dead_code)]
     pub(crate) fn into_storage(self) -> S {
         self.root.into_inner().into_storage()

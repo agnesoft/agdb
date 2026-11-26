@@ -400,21 +400,6 @@ impl<Store: StorageData> DbImpl<Store> {
     pub fn size(&self) -> u64 {
         self.root.storage().len()
     }
-
-    /// Atomically replaces the database content with the data at `filename`.
-    ///
-    /// Opens the file (or creates a new empty database if it does not exist),
-    /// then swaps the internal storage under full MVCC synchronization.
-    /// In-flight read transactions that started before the call see the old
-    /// data; transactions that start after see the new data.
-    ///
-    /// Returns an error if the new database has a different page layout or
-    /// is in a legacy format that requires migration.
-    pub fn restore(&self, filename: &str) -> Result<(), DbError> {
-        let data = Store::new(filename).map_err(|e| create_error(filename, e))?;
-        let root = Root::open(data, Layout::default())?;
-        self.root.restore(root)
-    }
 }
 
 fn create_error(filename: &str, error: DbError) -> DbError {

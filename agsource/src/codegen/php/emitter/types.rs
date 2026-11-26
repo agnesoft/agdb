@@ -51,8 +51,14 @@ impl Emitter<'_> {
                 // wrapping the inner type.
                 let inner = self.wire_ty(ty);
                 self.line(0, &format!("/** Transparent wrapper for {inner}. */"));
-                self.line(0, &format!("class {} implements \\JsonSerializable {{", c.name));
-                self.line(1, &format!("public function __construct(public {inner} $value) {{}}"));
+                self.line(
+                    0,
+                    &format!("class {} implements \\JsonSerializable {{", c.name),
+                );
+                self.line(
+                    1,
+                    &format!("public function __construct(public {inner} $value) {{}}"),
+                );
                 self.line(0, "");
                 self.line(1, "public function jsonSerialize(): mixed {");
                 self.line(2, "return $this->value instanceof \\JsonSerializable ? $this->value->jsonSerialize() : $this->value;");
@@ -64,21 +70,30 @@ impl Emitter<'_> {
                 self.unsupported("a transparent struct without one field");
             }
             (Shape::Unit, _) => {
-                self.line(0, &format!("/** Unit type, serializes as null. */"));
-                self.line(0, &format!("class {} implements \\JsonSerializable {{", c.name));
+                self.line(0, "/** Unit type, serializes as null. */");
+                self.line(
+                    0,
+                    &format!("class {} implements \\JsonSerializable {{", c.name),
+                );
                 self.line(1, "public function jsonSerialize(): mixed { return null; }");
                 self.line(0, "}");
                 self.line(0, "");
             }
             (Shape::Tuple, fields) => {
-                self.line(0, &format!("class {} implements \\JsonSerializable {{", c.name));
+                self.line(
+                    0,
+                    &format!("class {} implements \\JsonSerializable {{", c.name),
+                );
                 // Store as positional array
                 let params: Vec<String> = fields
                     .iter()
                     .enumerate()
                     .map(|(i, (_, ty, _))| format!("public {} $_{i}", self.wire_ty(ty)))
                     .collect();
-                self.line(1, &format!("public function __construct({}) {{}}", params.join(", ")));
+                self.line(
+                    1,
+                    &format!("public function __construct({}) {{}}", params.join(", ")),
+                );
                 self.line(0, "");
                 self.line(1, "public function jsonSerialize(): mixed {");
                 let items: Vec<String> = (0..fields.len())
@@ -90,7 +105,10 @@ impl Emitter<'_> {
                 self.line(0, "");
             }
             (Shape::Named, fields) if !fields.is_empty() => {
-                self.line(0, &format!("class {} implements \\JsonSerializable {{", c.name));
+                self.line(
+                    0,
+                    &format!("class {} implements \\JsonSerializable {{", c.name),
+                );
 
                 // Constructor with promoted properties
                 if fields.len() == 1 {
@@ -98,7 +116,12 @@ impl Emitter<'_> {
                     let php_ty = self.constructor_ty(ty, m);
                     let name = &m.name;
                     let default = self.default_value(ty, m);
-                    self.line(1, &format!("public function __construct(public {php_ty} ${name}{default}) {{}}"));
+                    self.line(
+                        1,
+                        &format!(
+                            "public function __construct(public {php_ty} ${name}{default}) {{}}"
+                        ),
+                    );
                 } else {
                     self.line(1, "public function __construct(");
                     let last = fields.len() - 1;
@@ -120,13 +143,19 @@ impl Emitter<'_> {
                     let (_, ty, m) = fields[0];
                     let name = &m.name;
                     self.line(2, "return [");
-                    self.line(3, &format!("'{}' => {},", name, self.serialize_field(name, ty)));
+                    self.line(
+                        3,
+                        &format!("'{}' => {},", name, self.serialize_field(name, ty)),
+                    );
                     self.line(2, "];");
                 } else {
                     self.line(2, "return [");
                     for (_, ty, m) in fields {
                         let name = &m.name;
-                        self.line(3, &format!("'{}' => {},", name, self.serialize_field(name, ty)));
+                        self.line(
+                            3,
+                            &format!("'{}' => {},", name, self.serialize_field(name, ty)),
+                        );
                     }
                     self.line(2, "];");
                 }
@@ -137,8 +166,14 @@ impl Emitter<'_> {
             }
             (Shape::Named, _) => {
                 // Empty struct
-                self.line(0, &format!("class {} implements \\JsonSerializable {{", c.name));
-                self.line(1, "public function jsonSerialize(): mixed { return new \\stdClass(); }");
+                self.line(
+                    0,
+                    &format!("class {} implements \\JsonSerializable {{", c.name),
+                );
+                self.line(
+                    1,
+                    "public function jsonSerialize(): mixed { return new \\stdClass(); }",
+                );
                 self.line(0, "}");
                 self.line(0, "");
             }
@@ -174,12 +209,7 @@ impl Emitter<'_> {
     }
 
     /// A unit-only enum as a PHP 8.1 backed string enum.
-    fn backed_enum(
-        &mut self,
-        name: &str,
-        variants: &[(&Variant, &Member)],
-        _wire: &Wire,
-    ) {
+    fn backed_enum(&mut self, name: &str, variants: &[(&Variant, &Member)], _wire: &Wire) {
         self.line(0, &format!("enum {name}: string {{"));
 
         for (v, m) in variants {
@@ -193,14 +223,12 @@ impl Emitter<'_> {
 
     /// A payload enum as a class with static factory methods, a private
     /// constructor, and `\JsonSerializable` using serde's tagging.
-    fn factory_enum(
-        &mut self,
-        name: &str,
-        variants: &[(&Variant, &Member)],
-        wire: &Wire,
-    ) {
+    fn factory_enum(&mut self, name: &str, variants: &[(&Variant, &Member)], wire: &Wire) {
         self.line(0, &format!("class {name} implements \\JsonSerializable {{"));
-        self.line(1, "private function __construct(private string $tag, private mixed $value) {}");
+        self.line(
+            1,
+            "private function __construct(private string $tag, private mixed $value) {}",
+        );
         self.line(0, "");
 
         // Static factory methods
@@ -224,17 +252,19 @@ impl Emitter<'_> {
                     let params: Vec<String> = fields
                         .iter()
                         .filter_map(|(f, ty)| {
-                            m.fields.get(f).filter(|fm| !fm.skip).map(|fm| {
-                                format!("{} ${}", self.wire_ty(ty), fm.name)
-                            })
+                            m.fields
+                                .get(f)
+                                .filter(|fm| !fm.skip)
+                                .map(|fm| format!("{} ${}", self.wire_ty(ty), fm.name))
                         })
                         .collect();
                     let keys: Vec<String> = fields
                         .iter()
                         .filter_map(|(f, _)| {
-                            m.fields.get(f).filter(|fm| !fm.skip).map(|fm| {
-                                format!("'{}' => ${}", fm.name, fm.name)
-                            })
+                            m.fields
+                                .get(f)
+                                .filter(|fm| !fm.skip)
+                                .map(|fm| format!("'{}' => ${}", fm.name, fm.name))
                         })
                         .collect();
                     self.line(1, &format!(
@@ -254,7 +284,10 @@ impl Emitter<'_> {
         self.line(0, "");
 
         // Getter for the value
-        self.line(1, "public function getValue(): mixed { return $this->value; }");
+        self.line(
+            1,
+            "public function getValue(): mixed { return $this->value; }",
+        );
         self.line(0, "");
 
         // jsonSerialize based on tagging
@@ -269,7 +302,10 @@ impl Emitter<'_> {
             }
             Tagging::Internal(tag) => {
                 self.line(2, "if (is_array($this->value)) {");
-                self.line(3, &format!("return array_merge(['{tag}' => $this->tag], $this->value);"));
+                self.line(
+                    3,
+                    &format!("return array_merge(['{tag}' => $this->tag], $this->value);"),
+                );
                 self.line(2, "}");
                 self.line(2, &format!("return ['{tag}' => $this->tag];"));
             }
@@ -277,7 +313,10 @@ impl Emitter<'_> {
                 self.line(2, "if ($this->value === null) {");
                 self.line(3, &format!("return ['{tag}' => $this->tag];"));
                 self.line(2, "}");
-                self.line(2, &format!("return ['{tag}' => $this->tag, '{content}' => {serialize_value}];"));
+                self.line(
+                    2,
+                    &format!("return ['{tag}' => $this->tag, '{content}' => {serialize_value}];"),
+                );
             }
             Tagging::Untagged => {
                 self.line(2, "if ($this->value === null) {");
@@ -304,7 +343,10 @@ impl Emitter<'_> {
             Ty::Tuple(_) => "array".into(),
             Ty::Named(name, _) if self.m.wire.contains_key(name) => name.clone(),
             Ty::Param(p) => format!("mixed /* {p} */"),
-            ty => self.unsupported(&format!("{} is no serde type", crate::codegen::print::ty(ty))),
+            ty => self.unsupported(&format!(
+                "{} is no serde type",
+                crate::codegen::print::ty(ty)
+            )),
         }
     }
 
@@ -334,10 +376,14 @@ impl Emitter<'_> {
     fn serialize_field(&self, name: &str, ty: &Ty) -> String {
         match ty {
             Ty::Named(..) | Ty::Option(_) => {
-                format!("$this->{name} instanceof \\JsonSerializable ? $this->{name}->jsonSerialize() : $this->{name}")
+                format!(
+                    "$this->{name} instanceof \\JsonSerializable ? $this->{name}->jsonSerialize() : $this->{name}"
+                )
             }
             Ty::List(_) => {
-                format!("array_map(fn($v) => $v instanceof \\JsonSerializable ? $v->jsonSerialize() : $v, $this->{name})")
+                format!(
+                    "array_map(fn($v) => $v instanceof \\JsonSerializable ? $v->jsonSerialize() : $v, $this->{name})"
+                )
             }
             _ => format!("$this->{name}"),
         }

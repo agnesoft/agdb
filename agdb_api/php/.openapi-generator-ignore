@@ -1,8 +1,0 @@
-test/
-.openapi-generator
-.gitignore
-.travis.yml
-git_push.sh
-phpunit.xml.dist
-.php-cs-fixer.dist.php
-composer.json

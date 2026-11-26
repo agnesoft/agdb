@@ -12,14 +12,6 @@ impl Emitter<'_> {
     pub fn types(mut self) -> Php {
         let m = self.m;
 
-        self.line(0, "<?php");
-        self.line(0, &self.config.header.clone());
-        if !self.config.namespace.is_empty() {
-            self.line(0, "");
-            self.line(0, &format!("namespace {};", self.config.namespace));
-        }
-        self.line(0, "");
-
         for (name, wire) in &m.wire {
             self.current = name.clone();
 
@@ -30,7 +22,7 @@ impl Emitter<'_> {
         }
 
         Php {
-            code: self.out,
+            code: self.php_header() + &self.out,
             notes: self.notes,
             unsupported: self.unsupported,
             values: Vec::new(),
@@ -423,5 +415,181 @@ impl Emitter<'_> {
         }
 
         self.line(indent, " */");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::codegen::php::PhpConfig;
+    use crate::codegen::test_utilities::lower;
+
+    /// The declarations of the wire types `data` and what they reach,
+    /// declared after `Root`.
+    fn declared(source: &str, data: &[&str]) -> Php {
+        let (m, errors) = lower(&format!("pub struct Root;\n{source}"), &[], data);
+        assert_eq!(errors, Vec::<String>::new());
+        let config = PhpConfig {
+            header: "// header".into(),
+            namespace: "Test".into(),
+            types_require: "".into(),
+        };
+        Emitter::new(&m, &config).types()
+    }
+
+    mod emitter {
+        use super::*;
+
+        mod types {
+            use super::*;
+
+            #[test]
+            fn types_should_declare_the_structs_as_serde_serializes_them() {
+                let php = declared(
+                    r#"/// A
+///
+/// */ b
+#[derive(Serialize)]
+pub struct Named<T> {
+    /// a
+    pub a: u8,
+    pub b: Option<String>,
+    #[serde(default)]
+    pub c: Vec<Option<bool>>,
+    #[serde(skip)]
+    pub d: u8,
+    #[serde(rename = "e-f")]
+    pub e: (u8, f64),
+    pub g: T,
+    pub h: Unit,
+    pub i: (),
+    pub _j: Vec<u8>,
+    #[serde(rename = "$k")]
+    pub k: u8,
+}
+#[derive(Serialize)]
+pub struct Unit;
+#[derive(Serialize)]
+pub struct Newtype(pub u8);
+#[derive(Serialize)]
+pub struct Tuple(pub u8, pub Named<u8>);
+#[derive(Serialize)]
+pub struct Skipped(pub u8, #[serde(skip)] pub u8);
+#[derive(Serialize)]
+#[serde(transparent)]
+pub struct Transparent { pub a: Newtype }
+#[derive(Serialize)]
+pub struct Empty {}
+#[derive(Serialize)]
+pub struct Flattened { pub a: u8, #[serde(flatten)] pub b: Empty }
+#[derive(Serialize)]
+pub struct OnlyFlattened { #[serde(flatten)] pub a: Newtype, #[serde(flatten)] pub b: Tuple }"#,
+                    &[
+                        "Named",
+                        "Skipped",
+                        "Transparent",
+                        "Flattened",
+                        "OnlyFlattened",
+                    ],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nclass Empty implements \\JsonSerializable {\n    public function jsonSerialize(): mixed { return new \\stdClass(); }\n}\n\nclass Flattened implements \\JsonSerializable {\n    public function __construct(\n        public int $a,\n        public Empty $b\n    ) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'a' => $this->a,\n            'b' => $this->b instanceof \\JsonSerializable ? $this->b->jsonSerialize() : $this->b,\n        ];\n    }\n}\n\n/**\n * A\n *\n * *\\/ b\n */\nclass Named implements \\JsonSerializable {\n    public function __construct(\n        public int $a,\n        public string|null $b = null,\n        public array|null $c = null,\n        public array $e-f,\n        public mixed /* T */ $g,\n        public Unit $h,\n        public null $i,\n        public array $_j,\n        public int $$k\n    ) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'a' => $this->a,\n            'b' => $this->b instanceof \\JsonSerializable ? $this->b->jsonSerialize() : $this->b,\n            'c' => array_map(fn($v) => $v instanceof \\JsonSerializable ? $v->jsonSerialize() : $v, $this->c),\n            'e-f' => $this->e-f,\n            'g' => $this->g,\n            'h' => $this->h instanceof \\JsonSerializable ? $this->h->jsonSerialize() : $this->h,\n            'i' => $this->i,\n            '_j' => array_map(fn($v) => $v instanceof \\JsonSerializable ? $v->jsonSerialize() : $v, $this->_j),\n            '$k' => $this->$k,\n        ];\n    }\n}\n\nclass Newtype implements \\JsonSerializable {\n    public function __construct(public int $_0) {}\n\n    public function jsonSerialize(): mixed {\n        return [$this->_0 instanceof \\JsonSerializable ? $this->_0->jsonSerialize() : $this->_0];\n    }\n}\n\nclass OnlyFlattened implements \\JsonSerializable {\n    public function __construct(\n        public Newtype $a,\n        public Tuple $b\n    ) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'a' => $this->a instanceof \\JsonSerializable ? $this->a->jsonSerialize() : $this->a,\n            'b' => $this->b instanceof \\JsonSerializable ? $this->b->jsonSerialize() : $this->b,\n        ];\n    }\n}\n\nclass Skipped implements \\JsonSerializable {\n    public function __construct(public int $_0) {}\n\n    public function jsonSerialize(): mixed {\n        return [$this->_0 instanceof \\JsonSerializable ? $this->_0->jsonSerialize() : $this->_0];\n    }\n}\n\n/** Transparent wrapper for Newtype. */\nclass Transparent implements \\JsonSerializable {\n    public function __construct(public Newtype $value) {}\n\n    public function jsonSerialize(): mixed {\n        return $this->value instanceof \\JsonSerializable ? $this->value->jsonSerialize() : $this->value;\n    }\n}\n\nclass Tuple implements \\JsonSerializable {\n    public function __construct(public int $_0, public Named $_1) {}\n\n    public function jsonSerialize(): mixed {\n        return [$this->_0 instanceof \\JsonSerializable ? $this->_0->jsonSerialize() : $this->_0, $this->_1 instanceof \\JsonSerializable ? $this->_1->jsonSerialize() : $this->_1];\n    }\n}\n\n/** Unit type, serializes as null. */\nclass Unit implements \\JsonSerializable {\n    public function jsonSerialize(): mixed { return null; }\n}\n\n"
+                );
+            }
+
+            #[test]
+            fn types_should_declare_the_enums_in_their_tagging() {
+                let php = declared(
+                    r#"/// E
+#[derive(Serialize)]
+pub enum External {
+    /// a
+    A,
+    B(u8),
+    C(u8, String),
+    D { a: u8, #[serde(skip)] b: u8 },
+    #[serde(skip)]
+    E,
+}
+#[derive(Serialize)]
+#[serde(tag = "t")]
+pub enum Internal { A, B { a: u8 }, C(Inner) }
+#[derive(Serialize)]
+#[serde(tag = "t", content = "c")]
+pub enum Adjacent { A, B(u8), C { a: u8 } }
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum Untagged { A, B(u8), C { a: u8 } }
+#[derive(Serialize)]
+pub enum Empty {}
+#[derive(Serialize)]
+pub enum Skipped { #[serde(skip)] A }
+#[derive(Serialize)]
+pub struct Inner { pub b: u8 }"#,
+                    &[
+                        "External", "Internal", "Adjacent", "Untagged", "Empty", "Skipped",
+                    ],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nclass Adjacent implements \\JsonSerializable {\n    private function __construct(private string $tag, private mixed $value) {}\n\n    public static function A(): self { return new self('A', null); }\n    public static function B(int $value): self { return new self('B', $value); }\n    public static function C(int $a): self { return new self('C', ['a' => $a]); }\n\n    public function getTag(): string { return $this->tag; }\n\n    public function getValue(): mixed { return $this->value; }\n\n    public function jsonSerialize(): mixed {\n        if ($this->value === null) {\n            return ['t' => $this->tag];\n        }\n        return ['t' => $this->tag, 'c' => $this->value instanceof \\JsonSerializable ? $this->value->jsonSerialize() : $this->value];\n    }\n}\n\n/** E */\nclass External implements \\JsonSerializable {\n    private function __construct(private string $tag, private mixed $value) {}\n\n    /** a */\n    public static function A(): self { return new self('A', null); }\n    public static function B(int $value): self { return new self('B', $value); }\n    public static function C(array $value): self { return new self('C', $value); }\n    public static function D(int $a): self { return new self('D', ['a' => $a]); }\n\n    public function getTag(): string { return $this->tag; }\n\n    public function getValue(): mixed { return $this->value; }\n\n    public function jsonSerialize(): mixed {\n        if ($this->value === null) {\n            return $this->tag;\n        }\n        return [$this->tag => $this->value instanceof \\JsonSerializable ? $this->value->jsonSerialize() : $this->value];\n    }\n}\n\nclass Inner implements \\JsonSerializable {\n    public function __construct(public int $b) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'b' => $this->b,\n        ];\n    }\n}\n\nclass Internal implements \\JsonSerializable {\n    private function __construct(private string $tag, private mixed $value) {}\n\n    public static function A(): self { return new self('A', null); }\n    public static function B(int $a): self { return new self('B', ['a' => $a]); }\n    public static function C(Inner $value): self { return new self('C', $value); }\n\n    public function getTag(): string { return $this->tag; }\n\n    public function getValue(): mixed { return $this->value; }\n\n    public function jsonSerialize(): mixed {\n        if (is_array($this->value)) {\n            return array_merge(['t' => $this->tag], $this->value);\n        }\n        return ['t' => $this->tag];\n    }\n}\n\nclass Untagged implements \\JsonSerializable {\n    private function __construct(private string $tag, private mixed $value) {}\n\n    public static function A(): self { return new self('A', null); }\n    public static function B(int $value): self { return new self('B', $value); }\n    public static function C(int $a): self { return new self('C', ['a' => $a]); }\n\n    public function getTag(): string { return $this->tag; }\n\n    public function getValue(): mixed { return $this->value; }\n\n    public function jsonSerialize(): mixed {\n        if ($this->value === null) {\n            return null;\n        }\n        return $this->value instanceof \\JsonSerializable ? $this->value->jsonSerialize() : $this->value;\n    }\n}\n\n"
+                );
+            }
+
+            #[test]
+            fn types_should_declare_the_unit_enums_as_backed_enums_and_the_scalars_and_options() {
+                let php = declared(
+                    r#"#[derive(Serialize)]
+pub enum Kind {
+    /// a
+    A,
+    #[serde(rename = "bee")]
+    B,
+}
+#[derive(Serialize)]
+pub struct Scalars<T> { pub a: bool, pub b: f64, pub c: Option<T> }
+#[derive(Serialize)]
+pub struct Options<T>(pub Option<T>, pub Option<u8>);"#,
+                    &["Kind", "Scalars", "Options"],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nenum Kind: string {\n    /** a */\n    case A = 'A';\n    case B = 'bee';\n}\n\nclass Options implements \\JsonSerializable {\n    public function __construct(public mixed /* T */ $_0, public int|null $_1) {}\n\n    public function jsonSerialize(): mixed {\n        return [$this->_0 instanceof \\JsonSerializable ? $this->_0->jsonSerialize() : $this->_0, $this->_1 instanceof \\JsonSerializable ? $this->_1->jsonSerialize() : $this->_1];\n    }\n}\n\nclass Scalars implements \\JsonSerializable {\n    public function __construct(\n        public bool $a,\n        public float $b,\n        public mixed /* T */ $c = null\n    ) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'a' => $this->a,\n            'b' => $this->b,\n            'c' => $this->c instanceof \\JsonSerializable ? $this->c->jsonSerialize() : $this->c,\n        ];\n    }\n}\n\n"
+                );
+                assert_eq!(php.unsupported, Vec::<String>::new());
+            }
+
+            #[test]
+            fn types_should_report_the_types_serde_does_not_serialize() {
+                let php = declared(
+                    r#"#[derive(Serialize)]
+#[serde(transparent)]
+pub struct Two { pub a: u8, pub b: u8 }
+#[derive(Serialize)]
+#[serde(tag = "t")]
+pub enum Tagged { A(u8, u8) }
+#[derive(Serialize)]
+pub struct Uses { pub a: Plain }
+pub struct Plain { pub a: u8 }"#,
+                    &["Two", "Tagged", "Uses"],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nclass Tagged implements \\JsonSerializable {\n    private function __construct(private string $tag, private mixed $value) {}\n\n    public static function A(array $value): self { return new self('A', $value); }\n\n    public function getTag(): string { return $this->tag; }\n\n    public function getValue(): mixed { return $this->value; }\n\n    public function jsonSerialize(): mixed {\n        if (is_array($this->value)) {\n            return array_merge(['t' => $this->tag], $this->value);\n        }\n        return ['t' => $this->tag];\n    }\n}\n\nclass Uses implements \\JsonSerializable {\n    public function __construct(public unsupported() $a) {}\n\n    public function jsonSerialize(): mixed {\n        return [\n            'a' => $this->a instanceof \\JsonSerializable ? $this->a->jsonSerialize() : $this->a,\n        ];\n    }\n}\n\n"
+                );
+                assert_eq!(
+                    php.unsupported,
+                    vec![
+                        "Two: `a transparent struct without one field`".to_owned(),
+                        "Uses: `Plain is no serde type`".to_owned(),
+                    ]
+                );
+            }
+        }
     }
 }

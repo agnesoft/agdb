@@ -1,7 +1,9 @@
 use crate::CIError;
 use crate::roundtrip::host_cfg;
+use crate::utilities;
 use agplatform::Fs;
 use agplatform::Platform;
+use std::process::Command;
 
 use agsource::Cfg;
 use agsource::CfgSet;
@@ -164,9 +166,11 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .collect::<Result<Vec<_>, _>>()?;
     let roots = Roots::of(&c, data)?;
 
+    // Lower the builder module and run the shared passes.
     let (mut m, mut errors) = c.lower(&roots);
     errors.extend(tests.lower_tests(&c, SOURCE, &mut m));
     errors.extend(api.lower_exported(&c, SOURCE, &mut m));
+    // The TS type declarations read the wire types before the passes erase newtypes.
     let declarations = Emitter::new(&m, &ts_config("")).types();
     let passes = Passes::new()
         .with(Resolve)
@@ -187,6 +191,7 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .with(RemoveDeadHelpers);
     run(platform, &mut m, &passes, dump, &mut errors)?;
 
+    // Lower the route tests and run their passes.
     let server_tests = load(
         SERVER,
         TargetKind::Test,
@@ -226,8 +231,11 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         &dump.join(ROUTES_DUMP),
         &mut errors,
     )?;
+
+    // The TS client and route check.
     let php_client_m = client_m.clone();
-    let (client, checked_m) = client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
+    let (ts_client, checked_m) =
+        ts_client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
     let server = load(
         SERVER,
         TargetKind::Bin,
@@ -243,82 +251,18 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(lowering);
     let (checked, lowering) = routes::check(&checked_m, &[&defs], &transport, &served);
     errors.extend(lowering);
-    let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
-    let fs = platform.fs();
-    let php_tests =
-        PhpEmitter::new(&m, &php_config("")).tests("QueryBuilderTest", "", &[(DERIVED, "")]);
-    let php_route_tests = PhpEmitter::new(&routes, &php_config("test_server")).tests(
-        "ApiTest",
-        "",
-        &[(API, ""), (GLUE, "")],
-    );
-    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(
-        TESTS_NAME,
-        TS_MODULE,
-        &[(DERIVED, TS_DERIVED)],
-    );
-    let routes = Emitter::new(&routes, &ts_config("../src/types.ts")).tests(
-        ROUTES,
-        TS_MODULE,
-        &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
-    );
-    fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
-    fs.write(dump.join(ROUTE_CHECK_DUMP), checked.dump())?;
-    fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
-    fs.write(Path::new(root).join(TS), ts.code)?;
-    fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
-    fs.write(Path::new(root).join(TS_API), client.code)?;
-    fs.write(Path::new(root).join(TS_ROUTES), routes.code)?;
-    fs.write(Path::new(root).join(TS_INDEX), index(&ts.values))?;
-    let unsupported: Vec<String> = declarations
-        .unsupported
-        .into_iter()
-        .chain(ts.unsupported)
-        .chain(client.unsupported)
-        .chain(tests.unsupported)
-        .chain(routes.unsupported)
-        .collect();
 
-    if !unsupported.is_empty() {
-        return Err(format!(
-            "generate: {} expressions without a TS form:\n{}",
-            unsupported.len(),
-            unsupported.join("\n")
-        )
-        .into());
-    }
-
-    // ---- PHP generation from the same lowered modules ----
-    let php_types = PhpEmitter::new(&m, &php_config("")).types();
-    let php_builder = PhpEmitter::new(&m, &php_config("types")).module();
-    let php_client = php_client(
+    emit_ts(
         platform,
-        php_client_m,
-        &dump.join("php_client"),
-        &mut errors,
+        root,
+        dump,
+        &m,
+        &routes,
+        declarations,
+        ts_client,
+        &checked,
     )?;
-    fs.write(Path::new(root).join(PHP_TYPES), php_types.code)?;
-    fs.write(Path::new(root).join(PHP), php_builder.code)?;
-    fs.write(Path::new(root).join(PHP_API), php_client.code)?;
-    fs.write(Path::new(root).join(PHP_TESTS), php_tests.code)?;
-    fs.write(Path::new(root).join(PHP_ROUTES), php_route_tests.code)?;
-    let php_unsupported: Vec<String> = php_types
-        .unsupported
-        .into_iter()
-        .chain(php_builder.unsupported)
-        .chain(php_client.unsupported)
-        .chain(php_tests.unsupported)
-        .chain(php_route_tests.unsupported)
-        .collect();
-
-    if !php_unsupported.is_empty() {
-        return Err(format!(
-            "generate: {} expressions without a PHP form:\n{}",
-            php_unsupported.len(),
-            php_unsupported.join("\n")
-        )
-        .into());
-    }
+    emit_php(platform, root, dump, &m, &routes, php_client_m, &mut errors)?;
 
     if errors.is_empty() {
         return Ok(());
@@ -336,56 +280,66 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     .into())
 }
 
-/// `m` after `passes`, dumped to `dump` after loading and after each pass as
-/// `NN_<pass>.rs.txt`.
-fn run(
-    platform: &impl Platform,
-    m: &mut Module,
-    passes: &Passes,
-    dump: &Path,
-    errors: &mut Vec<agsource::Error>,
-) -> Result<(), CIError> {
-    run_from(platform, m, passes, dump, 0, errors)
-}
+// ── TypeScript ───────────────────────────────────────────────────────────
 
-/// [`run`] numbering the dumps from `first`, the module after loading only
-/// dumped for `0`.
-fn run_from(
+/// Emits and writes the TypeScript files from the lowered modules.
+#[allow(clippy::too_many_arguments)]
+fn emit_ts(
     platform: &impl Platform,
-    m: &mut Module,
-    passes: &Passes,
+    root: &str,
     dump: &Path,
-    first: usize,
-    errors: &mut Vec<agsource::Error>,
+    m: &Module,
+    routes: &Module,
+    declarations: agsource::codegen::ts::Ts,
+    ts_client: agsource::codegen::ts::Ts,
+    checked: &routes::Checked,
 ) -> Result<(), CIError> {
+    let ts = Emitter::new(m, &ts_config("./types.ts")).module();
+    let tests = Emitter::new(m, &ts_config("../src/types.ts")).tests(
+        TESTS_NAME,
+        TS_MODULE,
+        &[(DERIVED, TS_DERIVED)],
+    );
+    let route_tests = Emitter::new(routes, &ts_config("../src/types.ts")).tests(
+        ROUTES,
+        TS_MODULE,
+        &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
+    );
+
     let fs = platform.fs();
-    fs.create_dir_all(dump)?;
-    let mut step = first;
-    let mut write = |title: &str, m: &Module| {
-        let file = dump.join(format!("{step:02}_{title}.rs.txt"));
-        step += 1;
-        fs.write(&file, print::module(m, title))
-    };
-    if first == 0 {
-        write("load", m)?;
+    fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
+    fs.write(dump.join(ROUTE_CHECK_DUMP), checked.dump())?;
+    fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
+    fs.write(Path::new(root).join(TS), ts.code)?;
+    fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
+    fs.write(Path::new(root).join(TS_API), ts_client.code)?;
+    fs.write(Path::new(root).join(TS_ROUTES), route_tests.code)?;
+    fs.write(Path::new(root).join(TS_INDEX), index(&ts.values))?;
+
+    let unsupported: Vec<String> = declarations
+        .unsupported
+        .into_iter()
+        .chain(ts.unsupported)
+        .chain(ts_client.unsupported)
+        .chain(tests.unsupported)
+        .chain(route_tests.unsupported)
+        .collect();
+
+    if !unsupported.is_empty() {
+        return Err(format!(
+            "generate: {} expressions without a TS form:\n{}",
+            unsupported.len(),
+            unsupported.join("\n")
+        )
+        .into());
     }
 
-    let mut failed = None;
-    errors.extend(passes.run(m, &mut |title: &str, m: &Module| {
-        if let Err(e) = write(title, m) {
-            failed.get_or_insert(e);
-        }
-    }));
-
-    match failed {
-        Some(e) => Err(e.into()),
-        None => Ok(()),
-    }
+    Ok(())
 }
 
-/// The client module `m` after its passes, dumped to `dump`, and the module
+/// The TS client module `m` after its passes, dumped to `dump`, and the module
 /// after [`Inline`], with the URLs and the types of its requests.
-fn client(
+fn ts_client(
     platform: &impl Platform,
     mut m: Module,
     dump: &Path,
@@ -433,13 +387,56 @@ fn ts_config(types: &str) -> TsConfig {
     }
 }
 
-/// The PHP config: the namespace and optional types require path.
-fn php_config(types: &str) -> PhpConfig {
-    PhpConfig {
-        header: format!("// GENERATED by `agci generate` from {SOURCE} and {API}. DO NOT EDIT."),
-        namespace: "Agnesoft\\AgdbApi".into(),
-        types_require: types.into(),
+// ── PHP ──────────────────────────────────────────────────────────────────
+
+/// Emits and writes the PHP files from the lowered modules, then formats them.
+fn emit_php(
+    platform: &impl Platform,
+    root: &str,
+    dump: &Path,
+    m: &Module,
+    routes: &Module,
+    client_m: Module,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(), CIError> {
+    let php_types = PhpEmitter::new(m, &php_config("")).types();
+    let php_builder = PhpEmitter::new(m, &php_config("types")).module();
+    let php_client = php_client(platform, client_m, &dump.join("php_client"), errors)?;
+    let php_tests =
+        PhpEmitter::new(m, &php_config("")).tests("QueryBuilderTest", "", &[(DERIVED, "")]);
+    let php_route_tests = PhpEmitter::new(routes, &php_config("test_server")).tests(
+        "ApiTest",
+        "",
+        &[(API, ""), (GLUE, "")],
+    );
+
+    let fs = platform.fs();
+    fs.write(Path::new(root).join(PHP_TYPES), php_types.code)?;
+    fs.write(Path::new(root).join(PHP), php_builder.code)?;
+    fs.write(Path::new(root).join(PHP_API), php_client.code)?;
+    fs.write(Path::new(root).join(PHP_TESTS), php_tests.code)?;
+    fs.write(Path::new(root).join(PHP_ROUTES), php_route_tests.code)?;
+    format_php(platform, root)?;
+
+    let unsupported: Vec<String> = php_types
+        .unsupported
+        .into_iter()
+        .chain(php_builder.unsupported)
+        .chain(php_client.unsupported)
+        .chain(php_tests.unsupported)
+        .chain(php_route_tests.unsupported)
+        .collect();
+
+    if !unsupported.is_empty() {
+        return Err(format!(
+            "generate: {} expressions without a PHP form:\n{}",
+            unsupported.len(),
+            unsupported.join("\n")
+        )
+        .into());
     }
+
+    Ok(())
 }
 
 /// The PHP client module `m` after its passes, dumped to `dump`.
@@ -462,4 +459,71 @@ fn php_client(
         .with(RemoveDeadHelpers);
     run_from(platform, &mut m, &passes, dump, 5, errors)?;
     Ok(PhpEmitter::new(&m, &php_config("types")).client())
+}
+
+/// The PHP config: the namespace and optional types require path.
+fn php_config(types: &str) -> PhpConfig {
+    PhpConfig {
+        header: format!("// GENERATED by `agci generate` from {SOURCE} and {API}. DO NOT EDIT."),
+        namespace: "Agnesoft\\AgdbApi".into(),
+        types_require: types.into(),
+    }
+}
+
+/// Formats the generated PHP files with prettier so the output matches the project style.
+fn format_php(platform: &impl Platform, root: &str) -> Result<(), CIError> {
+    let php_dir = Path::new(root).join("agdb_api/php");
+    let mut cmd = Command::new("pnpm");
+    cmd.args(["run", "format"]).current_dir(&php_dir);
+    utilities::run_command(platform, &cmd)?;
+    Ok(())
+}
+
+// ── Pass runner ──────────────────────────────────────────────────────────
+
+/// `m` after `passes`, dumped to `dump` after loading and after each pass as
+/// `NN_<pass>.rs.txt`.
+fn run(
+    platform: &impl Platform,
+    m: &mut Module,
+    passes: &Passes,
+    dump: &Path,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(), CIError> {
+    run_from(platform, m, passes, dump, 0, errors)
+}
+
+/// [`run`] numbering the dumps from `first`, the module after loading only
+/// dumped for `0`.
+fn run_from(
+    platform: &impl Platform,
+    m: &mut Module,
+    passes: &Passes,
+    dump: &Path,
+    first: usize,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(), CIError> {
+    let fs = platform.fs();
+    fs.create_dir_all(dump)?;
+    let mut step = first;
+    let mut write = |title: &str, m: &Module| {
+        let file = dump.join(format!("{step:02}_{title}.rs.txt"));
+        step += 1;
+        fs.write(&file, print::module(m, title))
+    };
+    if first == 0 {
+        write("load", m)?;
+    }
+
+    let mut failed = None;
+    errors.extend(passes.run(m, &mut |title: &str, m: &Module| {
+        if let Err(e) = write(title, m) {
+            failed.get_or_insert(e);
+        }
+    }));
+
+    match failed {
+        Some(e) => Err(e.into()),
+        None => Ok(()),
+    }
 }

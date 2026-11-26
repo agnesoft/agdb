@@ -8,7 +8,6 @@ use crate::codegen::pass::dict_global;
 use crate::codegen::pass::is_statement;
 use crate::codegen::pass::normalizer;
 use crate::codegen::pass::return_tail;
-use crate::codegen::pass::subst;
 use crate::codegen::print;
 use std::collections::BTreeSet;
 use std::fmt::Write;
@@ -255,25 +254,6 @@ impl<'a> Emitter<'a> {
         m.traits[name]
             .iter()
             .filter(move |f| !reflective || f.recv.is_none())
-    }
-
-    #[allow(dead_code)]
-    fn has_self(&self, name: &str) -> bool {
-        self.interface_sigs(name).any(|f| {
-            f.recv.is_some()
-                || f.params
-                    .iter()
-                    .map(|(_, t)| t)
-                    .chain([&f.ret])
-                    .any(|t| subst(t, &Ty::Param("Self".into()), &[]).mentions("Self"))
-        })
-    }
-
-    #[allow(dead_code)]
-    fn is_reflective(&self, param: &str) -> bool {
-        self.generics
-            .iter()
-            .any(|g| g.name == param && g.bounds.iter().any(|(b, _)| self.m.is_reflective(b)))
     }
 
     fn self_ty(&self, class: &str) -> Ty {
@@ -665,7 +645,7 @@ impl<'a> Emitter<'a> {
 
     /// The standard PHP file header: `<?php`, the generated comment, and the
     /// namespace when configured.
-    fn php_header(&self) -> String {
+    pub(crate) fn php_header(&self) -> String {
         let mut head = String::from("<?php\n");
         head.push_str(&self.config.header);
         head.push('\n');
@@ -1260,13 +1240,6 @@ impl<'a> Emitter<'a> {
 
 // ── Free helpers ─────────────────────────────────────────────────────────
 
-/// Whether the client method `f` takes its parameters as named: a method
-/// with parameters.
-#[allow(dead_code)]
-fn by_name(f: &Func) -> bool {
-    f.recv.is_some() && !f.params.is_empty()
-}
-
 /// The targets of the normalizers of `m`.
 fn normalized(m: &Module) -> BTreeSet<&str> {
     m.functions
@@ -1395,13 +1368,1122 @@ fn is_block_statement(e: &Expr) -> bool {
 /// Convert snake_case to CamelCase for PHPUnit test method names.
 fn to_camel_case(s: &str) -> String {
     s.split(['_', ':'])
-        .filter(|w| !w.is_empty())
-        .map(|word| {
+        .filter_map(|word| {
             let mut chars = word.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
-            }
+            chars
+                .next()
+                .map(|c| c.to_uppercase().to_string() + chars.as_str())
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::codegen::pass::*;
+    use crate::codegen::test_utilities::SUITE;
+    use crate::codegen::test_utilities::conversion;
+    use crate::codegen::test_utilities::lower;
+    use crate::codegen::test_utilities::suite;
+    use crate::codegen::test_utilities::tested;
+    use crate::codegen::ts::AcceptElementSources;
+    use crate::codegen::ts::EraseCasts;
+    use crate::codegen::ts::EraseTraits;
+    use crate::codegen::ts::OmitSkippedDefaults;
+    use crate::codegen::ts::RemoveDeadHelpers;
+    use crate::codegen::ts::RenameShadowed;
+    use crate::codegen::ts::UnescapeIdentifiers;
+    use std::collections::BTreeMap;
+
+    fn config() -> PhpConfig {
+        PhpConfig {
+            header: "// header".into(),
+            namespace: "Test".into(),
+            types_require: "".into(),
+        }
+    }
+
+    fn emitted(source: &str, traits: &[&str], data: &[&str]) -> Php {
+        let (mut m, errors) = lower(source, traits, data);
+        assert_eq!(errors, Vec::<String>::new());
+        passes(&mut m);
+        Emitter::new(&m, &config()).module()
+    }
+
+    fn emitted_tests(source: &str, tests: &str, data: &[&str]) -> Php {
+        let (mut m, errors) = tested(source, &[], tests, data);
+        assert_eq!(errors, Vec::<String>::new());
+        passes(&mut m);
+        Emitter::new(&m, &config()).tests("Suite", "", &[])
+    }
+
+    fn passes(m: &mut Module) {
+        let errors = Passes::new()
+            .with(Resolve)
+            .with(Prune)
+            .with(ExplicitReturns)
+            .with(Inline)
+            .with(AcceptElementSources)
+            .with(LowerConversions)
+            .with(TraitDicts)
+            .with(EraseOwnership)
+            .with(InferEmptyLists)
+            .with(TagResults)
+            .with(EraseTraits)
+            .with(EraseCasts)
+            .with(EraseNewtypes)
+            .with(UnescapeIdentifiers)
+            .with(OmitSkippedDefaults)
+            .with(RemoveDeadHelpers)
+            .run(m, &mut |_, _| {});
+        assert_eq!(
+            errors.iter().map(ToString::to_string).collect::<Vec<_>>(),
+            Vec::<String>::new()
+        );
+    }
+
+    /// The passes of the route tests: those of the builder, [`ThrowErrors`]
+    /// and [`RenameShadowed`].
+    fn route_passes(m: &mut Module) {
+        Passes::new()
+            .with(Resolve)
+            .with(Prune)
+            .with(ExplicitReturns)
+            .with(Inline)
+            .with(AcceptElementSources)
+            .with(LowerConversions)
+            .with(TraitDicts)
+            .with(EraseOwnership)
+            .with(ThrowErrors)
+            .with(InferEmptyLists)
+            .with(TagResults)
+            .with(EraseTraits)
+            .with(EraseCasts)
+            .with(EraseNewtypes)
+            .with(UnescapeIdentifiers)
+            .with(OmitSkippedDefaults)
+            .with(RemoveDeadHelpers)
+            .with(RenameShadowed)
+            .run(m, &mut |_, _| {});
+    }
+
+    fn class(name: &str, fields: Vec<(&str, Ty)>, methods: Vec<Func>) -> (String, Class) {
+        (
+            name.into(),
+            Class {
+                name: name.into(),
+                generics: Vec::new(),
+                fields: fields.into_iter().map(|(n, t)| (n.into(), t)).collect(),
+                methods,
+                trait_impls: BTreeMap::new(),
+            },
+        )
+    }
+
+    fn en(name: &str, variants: Vec<Variant>, methods: Vec<Func>) -> (String, Enum) {
+        (
+            name.into(),
+            Enum {
+                name: name.into(),
+                variants,
+                methods,
+            },
+        )
+    }
+
+    fn int(i: i64) -> Expr {
+        Expr::typed(K::Lit(Lit::Int(i)), Ty::Int("u64"))
+    }
+
+    fn call(callee: Callee, recv: Option<Expr>, args: Vec<Expr>) -> Expr {
+        Expr::new(K::Call {
+            callee,
+            recv: recv.map(Expr::boxed),
+            args,
+        })
+    }
+
+    fn ret(e: Expr) -> Expr {
+        Expr::new(K::Return(Some(e.boxed())))
+    }
+
+    fn let_(name: &str, value: Expr) -> Expr {
+        Expr::new(K::Let {
+            name: name.into(),
+            value: Some(value.boxed()),
+        })
+    }
+
+    fn variant(en: &str, var: &str, inner: Vec<Pat>) -> Pat {
+        Pat::Variant {
+            en: en.into(),
+            var: var.into(),
+            inner,
+        }
+    }
+
+    mod emitter {
+        use super::*;
+
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn tests_should_be_a_phpunit_class_with_assertions_and_variables() {
+                let php = emitted_tests(
+                    "pub struct Root;",
+                    "#[test]\nfn t() { assert_eq!(1, 1); }",
+                    &[],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfinal class Suite extends \\PHPUnit\\Framework\\TestCase {\n    public function testT(): void {\n        $this->assertEquals(1, 1);\n    }\n}\n"
+                );
+            }
+
+            #[test]
+            fn tests_should_emit_the_builder_calls_and_data_types() {
+                let php = emitted_tests(
+                    r#"pub struct Root { pub q: Q, pub a: A, pub v: V, pub e: E }
+pub struct Q { pub n: u8 }
+pub enum E { X }
+pub struct A;
+pub struct V;
+impl<T: Into<V>> From<(T, T)> for A {
+    fn from(v: (T, T)) -> Self { A {} }
+}
+impl From<u8> for V {
+    fn from(v: u8) -> Self { V {} }
+}
+impl E {
+    pub fn get(&self) -> u8 { 1 }
+}
+impl Root {
+    pub fn new() -> Root { Root { q: Q { n: 1 }, a: A {}, v: V {}, e: E::X } }
+    pub fn q(&self) -> Q { Q { n: self.q.n } }
+}"#,
+                    r#"use c::Root;
+#[test]
+fn first() {
+    let r = Root::new();
+    assert_eq!(r.q(), c::Q { n: 1 });
+}
+#[test]
+fn second() {
+    let a: c::A = (1, 2).into();
+    let n = c::E::X.get();
+    panic!("p");
+}"#,
+                    &["Q", "E"],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfinal class Suite extends \\PHPUnit\\Framework\\TestCase {\n    public function testFirst(): void {\n        $r = Root::new();\n        $this->assertEquals($r->q(), new Q(n: 1));\n    }\n\n    public function testSecond(): void {\n        $a = into_A([1, 2]);\n        $n = E_get('X');\n        throw new \\RuntimeException(\"p\");\n    }\n}\n"
+                );
+                assert_eq!(php.unsupported, Vec::<String>::new());
+            }
+
+            #[test]
+            fn tests_should_build_the_variants_of_the_normalized_enums_through_their_constructors()
+            {
+                let php = emitted_tests(
+                    r#"pub struct Root { pub v: V, pub w: W }
+pub enum V { Id(u64), Name(String), None }
+pub enum W { P(u8) }
+impl From<u64> for V {
+    fn from(id: u64) -> Self { V::Id(id) }
+}
+impl Root {
+    pub fn new() -> Root { Root { v: V::None, w: W::P(0) } }
+    pub fn id(&self, v: impl Into<V>) -> V { v.into() }
+}"#,
+                    r#"use c::Root;
+use c::V;
+#[test]
+fn t() {
+    let r = Root::new();
+    assert_eq!(r.id(V::Id(1)), V::Id(1));
+    assert_ne!(r.id(V::Name("a".to_string())), V::None);
+    let w = c::W::P(1);
+}"#,
+                    &["V", "W"],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfinal class Suite extends \\PHPUnit\\Framework\\TestCase {\n    public function testT(): void {\n        $r = Root::new();\n        $this->assertEquals($r->id(V::Id(1)), ['Id' => 1]);\n        $this->assertNotEquals($r->id(V::Name('a')), 'None');\n        $w = ['P' => 1];\n    }\n}\n"
+                );
+                assert!(php.unsupported.is_empty());
+            }
+
+            #[test]
+            fn tests_should_emit_the_methods_of_the_options_lists_and_strings() {
+                let php = emitted_tests(
+                    "pub struct Root;",
+                    r#"#[test]
+fn checks() {
+    let o: Option<u64> = Some(1);
+    let mut v: Vec<u64> = vec![2, 1];
+    let a = o.unwrap();
+    assert!(o.is_some());
+    assert!(!o.is_none());
+    let d = o.map(|x| x + 1);
+    let f = v.iter().find(|x| **x == 1);
+    assert!(v.iter().any(|x| *x == 1));
+    assert!(v.iter().all(|x| *x > 0));
+    v.sort_by_key(|x| *x);
+    let r = v.remove(0);
+    assert_ne!(1, 2);
+}"#,
+                    &[],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfinal class Suite extends \\PHPUnit\\Framework\\TestCase {\n    public function testChecks(): void {\n        $o = 1;\n        $v = [2, 1];\n        $a = ($o ?? throw new \\RuntimeException('called `Option::unwrap()` on a `None` value'));\n        $this->assertTrue(($o !== null));\n        $this->assertTrue(!($o === null));\n        $d = ($o === null ? null : (fn($x) => $x + 1)($o));\n        $f = array_values(array_filter($v, fn($x) => $x === 1))[0] ?? null;\n        $this->assertTrue(count(array_filter($v, fn($x) => $x === 1)) > 0);\n        $this->assertTrue(count(array_filter($v, fn($x) => $x > 0)) === count($v));\n        usort($v, fn($x) => $x);\n        $r = array_splice($v, 0, 1)[0];\n        $this->assertNotEquals(1, 2);\n    }\n}\n"
+                );
+                assert_eq!(php.unsupported, Vec::<String>::new());
+            }
+
+            #[test]
+            fn tests_should_escape_single_quotes_and_backslashes_in_php_strings() {
+                assert_eq!(escape_php("hello"), "hello");
+                assert_eq!(escape_php("it's"), "it\\'s");
+                assert_eq!(escape_php("a\\b"), "a\\\\b");
+                assert_eq!(escape_php("a\\'b"), "a\\\\\\'b");
+            }
+
+            #[test]
+            fn tests_should_emit_the_suites_as_flat_camel_case_methods() {
+                let (mut m, _) = suite(
+                    "pub struct Root;\nimpl Root { pub fn new() -> Root { Root } }",
+                    SUITE,
+                );
+                route_passes(&mut m);
+                m.tests.rotate_left(1);
+
+                let php =
+                    Emitter::new(&m, &config()).tests("Routes", "", &[("api", ""), ("glue", "")]);
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfunction unwrap_err(callable $fn): mixed {\n    try { $fn(); }\n    catch (\\Throwable $e) { return $e; }\n    throw new \\RuntimeException(\"called `Result::unwrap_err()` on an `Ok` value\");\n}\n\nfinal class Routes extends \\PHPUnit\\Framework\\TestCase {\n    public function testLoginLogsIn(): void {\n        $server = Server::new();\n        $status = $server->api->login();\n        $name = next_name('user');\n        $agent = Helpers::agent();\n        $pair = unsupported();\n        $port = unsupported();\n        $this->assertNotEquals($status, 0);\n    }\n\n    public function testLoginFails(): void {\n        $server = Server::new();\n        $status = unwrap_err(fn() => $server->api->fail())->status;\n        $code = unwrap_err(fn() => $server->api->ping())->status;\n        $root = Root::new();\n        $this->assertTrue(count($server->address()) === 0);\n    }\n\n    public function testLogoutLogsOut(): void {\n        $server = Server::new();\n        $this->assertNotEquals($server->dir, 'admin');\n    }\n\n    public function testStatus(): void {\n        $server = Server::new();\n        $this->assertEquals($server->dir, 'admin');\n    }\n}\n"
+                );
+                assert_eq!(
+                    php.unsupported,
+                    [
+                        "login::logs_in: `/* unsupported: unknown function `Pair` */`",
+                        "login::logs_in: `/* unsupported: unknown path `PORT` */`",
+                    ]
+                );
+            }
+
+            #[test]
+            fn tests_should_skip_the_ignored_tests() {
+                let php = emitted_tests(
+                    "pub struct Root;",
+                    "#[test]\n#[ignore]\nfn t() {}\n#[test]\n#[ignore = \"slow\"]\nfn u() {}",
+                    &[],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nfinal class Suite extends \\PHPUnit\\Framework\\TestCase {\n    public function testT(): void {\n    }\n\n    public function testU(): void {\n    }\n}\n"
+                );
+            }
+        }
+
+        mod module {
+            use super::*;
+
+            #[test]
+            fn module_should_emit_the_expressions_and_statements_of_the_builder_methods() {
+                let list = |t: Ty| Ty::List(Box::new(t));
+                let b = Expr::local("b", Ty::Bool);
+                let l = Expr::local("l", list(Ty::Option(Box::new(Ty::Int("u64")))));
+                let e = Expr::local("e", Ty::named("E"));
+                let t = Expr::local("t", Ty::Tuple(vec![Ty::Int("u64"), Ty::Str]));
+                let intrinsic = |i: Intrinsic, args: Vec<Expr>| {
+                    call(Callee::Intrinsic(i), Some(l.clone()), args)
+                };
+                let d = |ty: Ty| {
+                    Expr::typed(
+                        K::Construct {
+                            class: "D".into(),
+                            fields: vec![("a".into(), int(1))],
+                        },
+                        ty,
+                    )
+                };
+                let if_ = |cond: Expr, then: Vec<Expr>, els: Option<Vec<Expr>>| {
+                    Expr::new(K::If {
+                        cond: cond.boxed(),
+                        then,
+                        els,
+                    })
+                };
+                let match_ = |arms: Vec<(Pat, Vec<Expr>)>| {
+                    Expr::new(K::Match {
+                        value: e.clone().boxed(),
+                        arms,
+                    })
+                };
+                let if_let = |pat: Pat, then: Vec<Expr>| {
+                    Expr::new(K::IfLet {
+                        pat,
+                        value: e.clone().boxed(),
+                        then,
+                        els: None,
+                    })
+                };
+                let while_ = |body: Vec<Expr>| {
+                    Expr::new(K::While {
+                        cond: b.clone().boxed(),
+                        body,
+                    })
+                };
+                let not = |v: Expr| Expr::new(K::Not(v.boxed()));
+                let neq = Expr::new(K::Binary {
+                    op: "!=",
+                    l: b.clone().boxed(),
+                    r: Expr::new(K::Lit(Lit::Bool(true))).boxed(),
+                });
+                let x = Expr::local("x", Ty::Unknown);
+                let body = vec![
+                    Expr::new(K::Lit(Lit::Float(1.5))),
+                    Expr::new(K::Lit(Lit::Unit)),
+                    Expr::new(K::Lit(Lit::Bool(true))),
+                    Expr::variant("E", "A", None),
+                    t.clone().field("0", Ty::Int("u64")),
+                    e.clone().field("0", Ty::Int("u64")),
+                    Expr::local("root", Ty::named("Root")).field("0", Ty::Int("u64")),
+                    Expr::new(K::Payload {
+                        base: e.clone().boxed(),
+                        en: "E".into(),
+                        var: "B".into(),
+                    }),
+                    Expr::new(K::Index {
+                        base: l.clone().boxed(),
+                        index: int(0).boxed(),
+                    }),
+                    not(neq.clone()),
+                    not(intrinsic(Intrinsic::IsEmpty, Vec::new())),
+                    not(b.clone()),
+                    let_("y", if_(b.clone(), vec![ret(int(1))], Some(vec![int(2)]))),
+                    Expr::new(K::Closure {
+                        params: vec!["x".into()],
+                        body: vec![let_("z", x.clone()), ret(x.clone())],
+                    }),
+                    Expr::new(K::Closure {
+                        params: Vec::new(),
+                        body: vec![d(Ty::named("D"))],
+                    }),
+                    Expr::new(K::Ident("unresolved".into())),
+                    call(
+                        Callee::Member {
+                            class: "E".into(),
+                            name: "f".into(),
+                            types: Vec::new(),
+                        },
+                        Some(e.clone()),
+                        vec![int(1)],
+                    ),
+                    call(
+                        Callee::Member {
+                            class: "E".into(),
+                            name: "g".into(),
+                            types: Vec::new(),
+                        },
+                        Some(e.clone()),
+                        Vec::new(),
+                    ),
+                    call(
+                        Callee::Static {
+                            class: "Root".into(),
+                            name: "new".into(),
+                        },
+                        None,
+                        vec![int(1)],
+                    ),
+                    call(Callee::Extern("ext".into()), None, vec![int(1)]),
+                    call(Callee::Path(vec!["p".into()], Vec::new()), None, Vec::new()),
+                    call(Callee::Method("m".into(), Vec::new()), None, Vec::new()),
+                    intrinsic(
+                        Intrinsic::Map,
+                        vec![Expr::new(K::Closure {
+                            params: vec!["x".into()],
+                            body: vec![x.clone()],
+                        })],
+                    ),
+                    intrinsic(Intrinsic::Pop, Vec::new()),
+                    intrinsic(Intrinsic::LastMut, Vec::new()),
+                    intrinsic(Intrinsic::Len, Vec::new()),
+                    intrinsic(Intrinsic::Extend, vec![l.clone()]),
+                    intrinsic(Intrinsic::Reserve, vec![int(1)]),
+                    intrinsic(Intrinsic::UnwrapOrDefault, vec![int(0)]),
+                    intrinsic(
+                        Intrinsic::Expect,
+                        vec![Expr::new(K::Lit(Lit::Str("e".into())))],
+                    ),
+                    intrinsic(Intrinsic::MemTake, Vec::new()),
+                    Expr::typed(K::Fields(l.clone().boxed()), Ty::Int("u8")),
+                    Expr::typed(K::Fields(l.clone().boxed()), list(Ty::Int("u8"))),
+                    Expr::typed(K::Fields(l.clone().boxed()), list(Ty::Tuple(vec![Ty::Str]))),
+                    let_("r", int(1)),
+                    Expr::new(K::Assign {
+                        place: Expr::local("r", Ty::Int("u64")).boxed(),
+                        value: int(2).boxed(),
+                    }),
+                    let_("a", Expr::typed(K::Array(Vec::new()), list(Ty::Int("u64")))),
+                    let_("u", Expr::typed(K::Array(Vec::new()), list(Ty::Unknown))),
+                    let_("c", d(Ty::named("D"))),
+                    let_("cu", d(Ty::Unknown)),
+                    let_(
+                        "v",
+                        Expr::typed(Expr::variant("E", "B", Some(int(1))).k, Ty::named("E")),
+                    ),
+                    Expr::new(K::Let {
+                        name: "n".into(),
+                        value: None,
+                    }),
+                    if_(Expr::new(K::Lit(Lit::Bool(true))), vec![int(3)], None),
+                    if_(b.clone(), vec![int(4)], Some(Vec::new())),
+                    if_(
+                        b.clone(),
+                        vec![int(5)],
+                        Some(vec![match_(vec![(Pat::Wild, vec![int(6)])])]),
+                    ),
+                    if_(
+                        b.clone(),
+                        vec![int(7)],
+                        Some(vec![if_(neq.clone(), vec![int(8)], None)]),
+                    ),
+                    if_let(variant("E", "A", Vec::new()), vec![int(9)]),
+                    if_let(
+                        variant("E", "B", vec![Pat::Bind("p".into())]),
+                        vec![ret(Expr::local("p", Ty::Int("u64")))],
+                    ),
+                    if_let(Pat::Bind("q".into()), vec![int(10)]),
+                    while_(Vec::new()),
+                    while_(vec![int(11)]),
+                    match_(vec![
+                        (variant("E", "A", Vec::new()), vec![int(12)]),
+                        (Pat::Lit(Lit::Int(1)), vec![int(13)]),
+                        (
+                            Pat::Bind("w".into()),
+                            vec![ret(Expr::local("w", Ty::named("E")))],
+                        ),
+                    ]),
+                    match_(vec![
+                        (variant("E", "A", Vec::new()), vec![int(14)]),
+                        (variant("E", "B", vec![Pat::Wild]), vec![int(15)]),
+                    ]),
+                    ret(Expr::new(K::Lit(Lit::Unit))),
+                ];
+                let refl = |name: &str| Generic {
+                    name: name.into(),
+                    bounds: vec![("Refl".into(), None)],
+                };
+                let exprs = Func {
+                    generics: vec![
+                        refl("T"),
+                        refl("Erased"),
+                        Generic {
+                            name: "P".into(),
+                            bounds: vec![("Other".into(), None)],
+                        },
+                    ],
+                    recv: Some(Recv::Value),
+                    ..Func::new(
+                        "exprs",
+                        vec![
+                            ("b".into(), Ty::Bool),
+                            ("l".into(), l.ty.clone()),
+                            ("e".into(), Ty::named("E")),
+                            ("t".into(), t.ty.clone()),
+                            ("s".into(), Ty::SelfTy),
+                            ("o".into(), Ty::Option(Box::new(Ty::Param("T".into())))),
+                            ("r".into(), Ty::Ref(Box::new(Ty::Int("u8")))),
+                            ("n".into(), Ty::Named("D".into(), vec![Ty::Int("u8")])),
+                            (
+                                "dict".into(),
+                                Ty::Dict("Refl".into(), Box::new(Ty::Param("U".into()))),
+                            ),
+                            ("x".into(), Ty::Param("T".into())),
+                            ("pp".into(), Ty::Param("P".into())),
+                        ],
+                        Ty::Unit,
+                        body,
+                    )
+                };
+                let m = Module {
+                    root: "Root".into(),
+                    builders: vec!["Root".into()],
+                    classes: [
+                        class(
+                            "Root",
+                            Vec::new(),
+                            vec![
+                                exprs,
+                                Func::new("new", Vec::new(), Ty::named("Root"), Vec::new()),
+                            ],
+                        ),
+                        class("D", vec![("a", Ty::Int("u64"))], Vec::new()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    enums: [en(
+                        "E",
+                        vec![
+                            Variant::Unit("A".into()),
+                            Variant::Tuple("B".into(), Ty::Int("u64")),
+                        ],
+                        Vec::new(),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    traits: [(
+                        "Refl".to_owned(),
+                        vec![
+                            Func {
+                                recv: Some(Recv::Ref),
+                                ..Func::new(
+                                    "keys",
+                                    vec![("n".into(), Ty::Int("u64"))],
+                                    Ty::SelfTy,
+                                    Vec::new(),
+                                )
+                            },
+                            Func::new(
+                                "make",
+                                vec![("n".into(), Ty::Int("u64"))],
+                                Ty::SelfTy,
+                                Vec::new(),
+                            ),
+                        ],
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..Module::default()
+                };
+
+                let php = Emitter::new(&m, &config()).module();
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\ninterface Refl {\n    public function make(int $n);\n}\n\nclass Root {\n    public function exprs(bool $b, $l, E $e, $t, $s, $o, $r, D $n, $dict, $x, $pp): void {\n        1.5;\n        true;\n        'A';\n        $t[0];\n        $e[0];\n        $root->_0;\n        $e['B'];\n        $l[0];\n        !($b !== true);\n        !(count($l) === 0);\n        !$b;\n        $y = ($b ? 1 : 2);\n        function($x) {\n            $z = $x;\n            return $x;\n        };\n        fn() => new D(a: 1);\n        unsupported();\n        E_f($e, 1);\n        E_g($e);\n        Root::new(1);\n        ext(1);\n        unsupported();\n        unsupported();\n        array_map(fn($x) => $x, $l);\n        array_pop($l);\n        $l[count($l) - 1];\n        count($l);\n        array_push($l, ...$l);\n        ($l ?? 0);\n        ($l ?? throw new \\RuntimeException('e'));\n        unsupported();\n        unsupported();\n        unsupported();\n        unsupported();\n        $r = 1;\n        $r = 2;\n        $a = [];\n        $u = [];\n        $c = new D(a: 1);\n        $cu = new D(a: 1);\n        $v = ['B' => 1];\n        $n = null;\n        3;\n        if ($b) {\n            4;\n        }\n        if ($b) {\n            5;\n        } else {\n            6;\n        }\n        if ($b) {\n            7;\n        } elseif ($b !== true) {\n            8;\n        }\n        if (is_array($e) && array_key_exists('A', $e)) {\n            9;\n        }\n        if (is_array($e) && array_key_exists('B', $e)) {\n            $p = $e['B'];\n            return $p;\n        }\n        if (true) {\n            10;\n        }\n        while ($b);\n        while ($b) {\n            11;\n        }\n        if (is_array($e) && array_key_exists('A', $e)) {\n            12;\n        } elseif ($e === 1) {\n            13;\n        } else {\n            $w = $e;\n            return $w;\n        }\n        if (is_array($e) && array_key_exists('A', $e)) {\n            14;\n        } else {\n            15;\n        }\n        return null;\n    }\n\n    public static function new(): Root {\n    }\n}\n\n"
+                );
+                assert_eq!(php.notes, Vec::<String>::new());
+                assert_eq!(
+                    php.unsupported,
+                    [
+                        "exprs: `unresolved/*unresolved*/`",
+                        "exprs: `Path([\"p\"], [])`",
+                        "exprs: `Method(\"m\", [])`",
+                        "exprs: `MemTake`",
+                        "exprs: `u8`",
+                        "exprs: `Vec<u8>`",
+                        "exprs: `Vec<(str)>`"
+                    ]
+                );
+            }
+
+            #[test]
+            fn module_should_emit_a_guard_per_runtime_representation_and_the_constructors_and_data_methods()
+             {
+                let v = |t: Ty| Expr::local("v", t);
+                let bind = || Pat::Bind("v".into());
+                let p = |e: Expr| Expr::typed(Expr::variant("X", "P", Some(e)).k, Ty::named("X"));
+                let list = |t: Ty| Ty::List(Box::new(t));
+                let case = |name: &str, to: &str, arms: Vec<(Ty, Pat, Expr)>| {
+                    Func::new(
+                        name,
+                        vec![("v".into(), Ty::Into(to.into()))],
+                        Ty::named(to),
+                        vec![ret(Expr::new(K::TypeCase {
+                            value: v(Ty::Into(to.into())).boxed(),
+                            arms,
+                        }))],
+                    )
+                };
+                let mut into_x = case(
+                    "into_X",
+                    "X",
+                    vec![
+                        (Ty::named("X"), bind(), v(Ty::named("X"))),
+                        (Ty::Bool, bind(), Expr::variant("X", "B", Some(v(Ty::Bool)))),
+                        (Ty::Float, bind(), v(Ty::Float)),
+                        (Ty::Int("u8"), bind(), p(v(Ty::Int("u8")))),
+                        (Ty::Int("i64"), bind(), p(v(Ty::Int("i64")))),
+                        (Ty::Int("i32"), bind(), p(v(Ty::Int("i32")))),
+                        (Ty::Str, bind(), v(Ty::Str)),
+                        (Ty::Str, bind(), v(Ty::Str)),
+                        (list(Ty::Int("u64")), bind(), v(Ty::Unknown)),
+                        (list(Ty::Int("i32")), bind(), v(Ty::Unknown)),
+                        (
+                            Ty::Tuple(vec![Ty::Str, Ty::Int("u64")]),
+                            bind(),
+                            v(Ty::Unknown),
+                        ),
+                        (list(Ty::named("U")), bind(), v(Ty::Unknown)),
+                        (Ty::Into("Z".into()), bind(), v(Ty::Unknown)),
+                        (Ty::Param("T".into()), bind(), v(Ty::Unknown)),
+                        (Ty::named("U"), bind(), v(Ty::Unknown)),
+                        (Ty::named("D"), bind(), v(Ty::Unknown)),
+                        (Ty::named("Nope"), bind(), v(Ty::Unknown)),
+                        (Ty::Unit, bind(), v(Ty::Unknown)),
+                        (
+                            Ty::named("Y"),
+                            variant("Y", "P", vec![Pat::Bind("p".into())]),
+                            p(Expr::local("p", Ty::Int("u64"))),
+                        ),
+                        (
+                            Ty::named("Y"),
+                            variant("Y", "Q", vec![Pat::Bind("q".into())]),
+                            p(Expr::local("q", Ty::Int("u64"))),
+                        ),
+                        (
+                            Ty::named("Y"),
+                            variant("Y", "R", vec![Pat::Wild]),
+                            p(int(0)),
+                        ),
+                    ],
+                );
+                into_x.generics = vec![
+                    Generic {
+                        name: "Other".into(),
+                        bounds: Vec::new(),
+                    },
+                    Generic {
+                        name: "T".into(),
+                        bounds: vec![("Refl".into(), None)],
+                    },
+                ];
+                let into_z = case(
+                    "into_Z",
+                    "Z",
+                    vec![
+                        (Ty::named("Z"), bind(), v(Ty::named("Z"))),
+                        (list(Ty::Into("X".into())), bind(), v(Ty::Unknown)),
+                        (
+                            Ty::Option(Box::new(Ty::Into("X".into()))),
+                            bind(),
+                            v(Ty::Unknown),
+                        ),
+                        (
+                            Ty::Tuple(vec![Ty::Into("X".into())]),
+                            bind(),
+                            v(Ty::Unknown),
+                        ),
+                    ],
+                );
+                let empty = Func::new("empty", Vec::new(), Ty::Unit, Vec::new());
+                let returns = Func::new("returns", Vec::new(), Ty::Unit, vec![ret(int(1))]);
+                let get = Func {
+                    recv: Some(Recv::Ref),
+                    ..Func::new(
+                        "get",
+                        Vec::new(),
+                        Ty::Int("u64"),
+                        vec![ret(
+                            Expr::typed(K::This, Ty::named("D")).field("a", Ty::Int("u64"))
+                        )],
+                    )
+                };
+                let make = Func::new("make", Vec::new(), Ty::named("D"), vec![ret(int(1))]);
+                let tuple = |n: &str, t: Ty| Variant::Tuple(n.into(), t);
+                let m = Module {
+                    classes: [
+                        class("D", vec![("a", Ty::Int("u64"))], vec![get, make]),
+                        (
+                            "C".to_owned(),
+                            Class {
+                                trait_impls: [(
+                                    "Tr".to_owned(),
+                                    vec![Func::new(
+                                        "add",
+                                        vec![("n".into(), Ty::Int("u64"))],
+                                        Ty::Int("u64"),
+                                        vec![ret(Expr::local("n", Ty::Int("u64")))],
+                                    )],
+                                )]
+                                .into_iter()
+                                .collect(),
+                                ..class("C", Vec::new(), Vec::new()).1
+                            },
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    enums: [
+                        en(
+                            "X",
+                            vec![tuple("P", Ty::Int("u64")), tuple("B", Ty::Bool)],
+                            Vec::new(),
+                        ),
+                        en(
+                            "Y",
+                            vec![
+                                tuple("P", Ty::Int("u64")),
+                                tuple("Q", Ty::Int("u64")),
+                                tuple("R", Ty::Int("u64")),
+                            ],
+                            Vec::new(),
+                        ),
+                        en(
+                            "U",
+                            vec![Variant::Unit("A".into()), Variant::Unit("B".into())],
+                            Vec::new(),
+                        ),
+                        en(
+                            "Z",
+                            vec![
+                                tuple("Z1", Ty::named("X")),
+                                Variant::Struct("S".into(), vec![("s".into(), Ty::Str)]),
+                            ],
+                            Vec::new(),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    conversions: vec![
+                        conversion("X", Ty::named("Y"), v(Ty::named("Y"))),
+                        conversion("Z", Ty::Unit, v(Ty::Unit)),
+                        conversion("W", Ty::named("U"), v(Ty::named("U"))),
+                    ],
+                    functions: vec![into_x, into_z, empty, returns],
+                    dicts: [
+                        ("Tr".to_owned(), "C".to_owned()),
+                        ("Tr".to_owned(), "D".to_owned()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    traits: [("Refl".to_owned(), Vec::new())].into_iter().collect(),
+                    ..Module::default()
+                };
+
+                let php = Emitter::new(&m, &config()).module();
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\ninterface Refl {\n}\n\n$C_Tr = [\n    'add' => function(int $n): int {\n        return $n;\n    },\n];\n\nclass X {\n    private function __construct(private string $tag, private mixed $value) {}\n    public static function P(int $v): self { return new self('P', $v); }\n    public static function B(bool $v): self { return new self('B', $v); }\n    public function jsonSerialize(): mixed { return [$this->tag => $this->value]; }\n}\n\nclass Y {\n    private function __construct(private string $tag, private mixed $value) {}\n    public static function P(int $v): self { return new self('P', $v); }\n    public static function Q(int $v): self { return new self('Q', $v); }\n    public static function R(int $v): self { return new self('R', $v); }\n    public function jsonSerialize(): mixed { return [$this->tag => $this->value]; }\n}\n\nclass Z {\n    private function __construct(private string $tag, private mixed $value) {}\n    public static function Z1($v): self { return new self('Z1', into_X($v)); }\n    public function jsonSerialize(): mixed { return [$this->tag => $this->value]; }\n}\n\nfunction into_X($v): X {\n    if (is_bool($v)) {\n        return ['B' => $v];\n    }\n    if (is_int($v)) {\n        return ['P' => $v];\n    }\n    if (is_float($v)) {\n        return $v;\n    }\n    if (is_string($v)) {\n        return $v;\n    }\n    if (is_array($v)) {\n        return $v;\n    }\n    if ($v instanceof D) {\n        return $v;\n    }\n    if ($v instanceof Nope) {\n        return $v;\n    }\n    if (is_array($v) && array_key_exists('Q', $v)) {\n        return ['P' => $v['Q']];\n    }\n    if (is_array($v) && array_key_exists('R', $v)) {\n        return ['P' => 0];\n    }\n    if (is_into_Z_value($v)) {\n        return $v;\n    }\n    if (is_object($v)) {\n        return $v;\n    }\n    return $v;\n}\n\nfunction into_Z($v): Z {\n    if (is_array($v)) {\n        return $v;\n    }\n    return $v;\n}\n\nfunction D_get(D $self): int {\n    return $self->a;\n}\n\nfunction D_make(): D {\n    return 1;\n}\n\n"
+                );
+                assert_eq!(
+                    php.notes,
+                    [
+                        "X: `i64` has the PHP representation of an earlier arm, dropped",
+                        "X: `u8` has the PHP representation of an earlier arm, dropped",
+                        "X: `str` has the PHP representation of an earlier arm, dropped",
+                        "X: `(str, u64)` has the PHP representation of an earlier arm, dropped",
+                        "X: `Vec<U>` has the PHP representation of an earlier arm, dropped",
+                        "X: `Vec<u64>` has the PHP representation of an earlier arm, dropped",
+                        "X: `X` has the PHP representation of an earlier arm, dropped",
+                        "X: `U` has the PHP representation of an earlier arm, dropped",
+                        "X: `Y::P(p)` arm is the identity in PHP, dropped",
+                        "Z: `(impl Into<X>)` has the PHP representation of an earlier arm, dropped",
+                        "Z: `Z` has the PHP representation of an earlier arm, dropped",
+                    ]
+                );
+                assert_eq!(
+                    php.unsupported,
+                    [
+                        "empty: `a function other than a conversion`",
+                        "returns: `a function other than a conversion`"
+                    ]
+                );
+            }
+
+            #[test]
+            fn module_should_emit_the_records_casts_wire_names_and_untyped_signatures() {
+                let list = |t: Ty| Ty::List(Box::new(t));
+                let t = || Ty::Param("T".into());
+                let b = Expr::local("b", Ty::Bool);
+                let l = Expr::local("l", list(Ty::Int("u64")));
+                let o = Expr::local("o", Ty::Option(Box::new(Ty::Int("u64"))));
+                let d = Expr::local("d", Ty::named("D"));
+                let str_ = |s: &str| Expr::new(K::Lit(Lit::Str(s.into())));
+                let intrinsic = |i: Intrinsic, recv: Expr, args: Vec<Expr>| {
+                    call(Callee::Intrinsic(i), Some(recv), args)
+                };
+                let cast = |ty: Ty| Expr::typed(K::Cast(int(1).boxed()), ty);
+                let if_ = |then: Vec<Expr>, els: Option<Vec<Expr>>| {
+                    Expr::new(K::If {
+                        cond: b.clone().boxed(),
+                        then,
+                        els,
+                    })
+                };
+                let closure = |body: Vec<Expr>| {
+                    Expr::new(K::Closure {
+                        params: Vec::new(),
+                        body,
+                    })
+                };
+                let if_let = |var: &str, inner: Vec<Pat>| {
+                    Expr::new(K::IfLet {
+                        pat: variant("Option", var, inner),
+                        value: o.clone().boxed(),
+                        then: vec![ret(Expr::local("y", Ty::Int("u64")))],
+                        els: None,
+                    })
+                };
+                let body = vec![
+                    Expr::new(K::Path(vec!["A".into(), "B".into()])),
+                    Expr::local("x", Ty::Unknown).field("y", Ty::Unknown),
+                    d.clone().field("a", Ty::Int("u64")),
+                    Expr::typed(
+                        K::Construct {
+                            class: "D".into(),
+                            fields: vec![("a".into(), int(1))],
+                        },
+                        Ty::named("D"),
+                    ),
+                    Expr::new(K::Ref(d.clone().boxed())),
+                    Expr::new(K::Deref(d.clone().boxed())),
+                    cast(Ty::Int("u8")),
+                    cast(Ty::Float),
+                    cast(Ty::Bool),
+                    cast(Ty::Str),
+                    cast(Ty::Unknown),
+                    Expr::new(K::Format(Vec::new())),
+                    Expr::new(K::Format(vec![
+                        str_("a'b"),
+                        str_(""),
+                        Expr::new(K::Format(vec![Expr::local("x", Ty::Unknown)])),
+                        int(1),
+                    ])),
+                    call(
+                        Callee::Static {
+                            class: "D".into(),
+                            name: "make".into(),
+                        },
+                        None,
+                        vec![int(1)],
+                    ),
+                    intrinsic(Intrinsic::Push, l.clone(), vec![int(1)]),
+                    intrinsic(
+                        Intrinsic::Push,
+                        intrinsic(Intrinsic::Expect, l.clone(), vec![str_("e")]),
+                        vec![int(2)],
+                    ),
+                    intrinsic(Intrinsic::Repeat, Expr::local("s", Ty::Str), vec![int(2)]),
+                    intrinsic(
+                        Intrinsic::IterForEach,
+                        l.clone(),
+                        vec![closure(vec![int(1)])],
+                    ),
+                    Expr::typed(Expr::variant("E", "B", Some(int(1))).k, Ty::named("E")),
+                    Expr::variant("I", "A", None),
+                    Expr::typed(
+                        K::Fields(d.clone().boxed()),
+                        list(Ty::Tuple(vec![Ty::Str, Ty::Unknown])),
+                    ),
+                    closure(vec![let_("z", int(1))]),
+                    closure(vec![if_(vec![int(1)], Some(vec![int(2)]))]),
+                    closure(vec![if_(vec![int(1)], None)]),
+                    if_(vec![int(3)], Some(vec![int(4)])),
+                    if_let("Some", vec![Pat::Bind("y".into())]),
+                    if_let("None", Vec::new()),
+                ];
+                let method =
+                    |name: &str, params: Vec<(String, Ty)>, ret: Ty, body: Vec<Expr>| Func {
+                        recv: Some(Recv::Ref),
+                        ..Func::new(name, params, ret, body)
+                    };
+                let into_k = Func::new(
+                    "into_K",
+                    vec![("v".into(), Ty::Into("K".into()))],
+                    Ty::named("K"),
+                    vec![ret(Expr::new(K::TypeCase {
+                        value: Expr::local("v", Ty::Into("K".into())).boxed(),
+                        arms: vec![
+                            (
+                                Ty::Int("u64"),
+                                Pat::Bind("v".into()),
+                                Expr::variant("K", "Kt", Some(Expr::local("v", Ty::Int("u64")))),
+                            ),
+                            (
+                                Ty::named("E"),
+                                variant("E", "A", Vec::new()),
+                                Expr::new(K::Match {
+                                    value: Expr::local("v", Ty::named("E")).boxed(),
+                                    arms: vec![(Pat::Wild, vec![int(1)])],
+                                }),
+                            ),
+                        ],
+                    }))],
+                );
+                let wire = |tagging: Tagging, members: &[(&str, &str)]| Wire {
+                    tagging,
+                    members: members
+                        .iter()
+                        .map(|(name, wire)| {
+                            (
+                                (*name).to_owned(),
+                                Member {
+                                    name: (*wire).into(),
+                                    ..Member::default()
+                                },
+                            )
+                        })
+                        .collect(),
+                    ..Wire::default()
+                };
+                let m = Module {
+                    root: "Root".into(),
+                    builders: vec!["Root".into()],
+                    records: ["R".to_owned()].into_iter().collect(),
+                    classes: [
+                        class(
+                            "Root",
+                            Vec::new(),
+                            vec![
+                                method(
+                                    "rest",
+                                    vec![
+                                        ("b".into(), Ty::Bool),
+                                        ("into".into(), Ty::Into("K".into())),
+                                    ],
+                                    Ty::Unit,
+                                    body,
+                                ),
+                                method("empty", Vec::new(), Ty::Unit, Vec::new()),
+                                method(
+                                    "param",
+                                    vec![("p".into(), t())],
+                                    t(),
+                                    vec![ret(Expr::local("p", t()))],
+                                ),
+                            ],
+                        ),
+                        (
+                            "D".to_owned(),
+                            Class {
+                                trait_impls: [(
+                                    "Tr".to_owned(),
+                                    vec![method(
+                                        "id",
+                                        vec![("p".into(), t())],
+                                        t(),
+                                        vec![ret(Expr::local("p", t()))],
+                                    )],
+                                )]
+                                .into_iter()
+                                .collect(),
+                                ..class("D", vec![("a", Ty::Int("u64"))], Vec::new()).1
+                            },
+                        ),
+                        class("R", vec![("a", Ty::Float), ("b", t())], Vec::new()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    enums: [
+                        en(
+                            "E",
+                            vec![
+                                Variant::Unit("A".into()),
+                                Variant::Tuple("B".into(), Ty::Int("u64")),
+                            ],
+                            Vec::new(),
+                        ),
+                        en("I", vec![Variant::Unit("A".into())], Vec::new()),
+                        en(
+                            "K",
+                            vec![
+                                Variant::Unit("Ku".into()),
+                                Variant::Tuple("Kt".into(), Ty::Int("u64")),
+                            ],
+                            Vec::new(),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    wire: [
+                        ("D".to_owned(), wire(Tagging::External, &[("a", "x")])),
+                        ("E".to_owned(), wire(Tagging::External, &[("B", "b")])),
+                        ("I".to_owned(), wire(Tagging::Internal("t".into()), &[])),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    conversions: vec![conversion(
+                        "K",
+                        Ty::Int("u64"),
+                        Expr::local("v", Ty::Int("u64")),
+                    )],
+                    functions: vec![into_k],
+                    dicts: [("Tr".to_owned(), "D".to_owned())].into_iter().collect(),
+                    traits: [(
+                        "Tr".to_owned(),
+                        vec![Func::new(
+                            "f",
+                            vec![("p".into(), t())],
+                            Ty::Int("u64"),
+                            Vec::new(),
+                        )],
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..Module::default()
+                };
+                let config = PhpConfig {
+                    header: "// header".into(),
+                    namespace: String::new(),
+                    types_require: "types".into(),
+                };
+
+                let php = Emitter::new(&m, &config).module();
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nrequire_once __DIR__ . '/types.php';\n\ninterface Tr {\n    public function f($p): int;\n}\n\nclass R {\n    public float $a;\n    public $b;\n}\n\n$D_Tr = [\n    'id' => function(D $self, $p) {\n        return $p;\n    },\n];\n\nclass K {\n    private function __construct(private string $tag, private mixed $value) {}\n    public static function Ku(): self { return new self('Ku', null); }\n    public static function Kt(int $v): self { return new self('Kt', $v); }\n    public function jsonSerialize(): mixed { return [$this->tag => $this->value]; }\n}\n\nfunction into_K($v): K {\n    if (is_int($v)) {\n        return ['Kt' => $v];\n    }\n    return 1;\n}\n\nclass Root {\n    public function rest(bool $b, IntoK $into): void {\n        A::B;\n        $x->y;\n        $d->x;\n        new D(x: 1);\n        $d;\n        $d;\n        (int)1;\n        (float)1;\n        (bool)1;\n        (string)1;\n        1;\n        '';\n        'a\\'b' . $x . 1;\n        D_make(1);\n        $l[] = 1;\n        $l[] = 2;\n        str_repeat($s, 2);\n        array_map(fn() => 1, $l);\n        ['b' => 1];\n        'unsupported()';\n        array_map(fn($k, $v) => [$k, $v], array_keys((array)$d), array_values((array)$d));\n        function() {\n            $z = 1;\n        };\n        fn() => ($b ? 1 : 2);\n        function() {\n            if ($b) {\n                1;\n            }\n        };\n        if ($b) {\n            3;\n        } else {\n            4;\n        }\n        if ($o !== null) {\n            $y = $o;\n            return $y;\n        }\n        if ($o === null) {\n            return $y;\n        }\n    }\n\n    public function empty(): void {\n    }\n\n    public function param($p) {\n        return $p;\n    }\n}\n\n"
+                );
+                assert_eq!(php.notes, Vec::<String>::new());
+                assert_eq!(php.unsupported, ["rest: `I is not externally tagged`"]);
+            }
+
+            #[test]
+            fn module_should_emit_a_simple_builder_without_panic_helper() {
+                let php = emitted(
+                    r#"
+                    pub struct Root;
+                    impl Root {
+                        pub fn n(&self) -> u64 {
+                            1
+                        }
+                    }
+                    "#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nclass Root {\n    public function n(): int {\n        return 1;\n    }\n}\n\n"
+                );
+            }
+
+            #[test]
+            fn module_should_emit_the_serialized_names_of_the_wire_types() {
+                let php = emitted(
+                    r#"
+                    pub struct Root;
+                    #[derive(Serialize)]
+                    #[serde(rename_all = "lowercase")]
+                    pub enum W { Ab(Q), Cd }
+                    #[derive(Serialize)]
+                    pub struct Q { #[serde(rename = "x")] pub a: u8 }
+                    "#,
+                    &[],
+                    &["W"],
+                );
+
+                assert_eq!(
+                    php.code,
+                    "<?php\n// header\n\nnamespace Test;\n\nclass Root {\n}\n\n"
+                );
+            }
+        }
+    }
 }

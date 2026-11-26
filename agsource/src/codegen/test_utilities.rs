@@ -330,9 +330,9 @@ pub(crate) fn client_passed(api: &str) -> Module {
     use super::pass::Inline;
     use super::pass::Passes;
     use super::pass::Prune;
+    use super::pass::RemoveDeadHelpers;
     use super::pass::Resolve;
     use super::pass::ThrowErrors;
-    use super::pass::RemoveDeadHelpers;
     use super::ts::EraseCasts;
 
     let (mut m, mut errors) = client(api);

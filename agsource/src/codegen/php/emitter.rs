@@ -153,7 +153,10 @@ impl<'a> Emitter<'a> {
     pub fn tests(mut self, name: &str, _module: &str, _glue: &[(&str, &str)]) -> Php {
         let m = self.m;
         self.constructors = constructed(m).into_iter().map(str::to_owned).collect();
-        self.line(0, &format!("final class {name} extends \\PHPUnit\\Framework\\TestCase {{"));
+        self.line(
+            0,
+            &format!("final class {name} extends \\PHPUnit\\Framework\\TestCase {{"),
+        );
         let mut suite: Option<&str> = None;
 
         for (i, f) in m.tests.iter().enumerate() {
@@ -388,11 +391,14 @@ impl<'a> Emitter<'a> {
                 // PHP is synchronous: unwrap_err wraps the call in a closure
                 // that a try/catch helper catches.
                 self.helpers.insert(UNWRAP_ERR);
-                let inner = recv.as_deref().map(|r| match &r.k {
-                    // Peel K::Await — PHP is sync, the call itself throws.
-                    K::Await(value) => self.expr(value),
-                    _ => self.expr(r),
-                }).unwrap_or_default();
+                let inner = recv
+                    .as_deref()
+                    .map(|r| match &r.k {
+                        // Peel K::Await — PHP is sync, the call itself throws.
+                        K::Await(value) => self.expr(value),
+                        _ => self.expr(r),
+                    })
+                    .unwrap_or_default();
                 format!("unwrap_err(fn() => {inner})")
             }
             K::Call { callee, recv, args } => self.call(callee, recv.as_deref(), args),
@@ -433,13 +439,11 @@ impl<'a> Emitter<'a> {
             ),
             K::Closure { params, body } => match body.as_slice() {
                 [one] if !is_block_statement(one) => {
-                    let params: Vec<String> =
-                        params.iter().map(|p| format!("${p}")).collect();
+                    let params: Vec<String> = params.iter().map(|p| format!("${p}")).collect();
                     format!("fn({}) => {}", params.join(", "), self.expr(returned(one)))
                 }
                 _ => {
-                    let params: Vec<String> =
-                        params.iter().map(|p| format!("${p}")).collect();
+                    let params: Vec<String> = params.iter().map(|p| format!("${p}")).collect();
                     let saved = std::mem::take(&mut self.out);
                     self.block(body, self.indent + 1);
                     let body_str = std::mem::replace(&mut self.out, saved);
@@ -558,9 +562,7 @@ impl<'a> Emitter<'a> {
             Intrinsic::Reserve => "null".into(),
             Intrinsic::UnwrapOrDefault => format!("({r} ?? {a})"),
             Intrinsic::Expect => {
-                format!(
-                    "({r} ?? throw new \\RuntimeException({a}))",
-                )
+                format!("({r} ?? throw new \\RuntimeException({a}))",)
             }
             Intrinsic::Unwrap => {
                 format!(
@@ -570,9 +572,7 @@ impl<'a> Emitter<'a> {
             Intrinsic::IsSome => format!("({r} !== null)"),
             Intrinsic::IsNone => format!("({r} === null)"),
             Intrinsic::MapSome => {
-                format!(
-                    "({r} === null ? null : ({a})({r}))"
-                )
+                format!("({r} === null ? null : ({a})({r}))")
             }
             Intrinsic::Find => {
                 format!("array_values(array_filter({r}, {a}))[0] ?? null")
@@ -889,10 +889,7 @@ impl<'a> Emitter<'a> {
         }
 
         let ret = self.ty(&f.ret);
-        self.line(
-            0,
-            &format!("function {}($v): {ret} {{", f.name),
-        );
+        self.line(0, &format!("function {}($v): {ret} {{", f.name));
 
         let last = kept.len().saturating_sub(1);
 
@@ -1028,7 +1025,11 @@ impl<'a> Emitter<'a> {
             };
             self.line(
                 1,
-                &format!("public function {}({}){ret_annotation};", f.name, params.join(", ")),
+                &format!(
+                    "public function {}({}){ret_annotation};",
+                    f.name,
+                    params.join(", ")
+                ),
             );
         }
 
@@ -1059,10 +1060,7 @@ impl<'a> Emitter<'a> {
                 continue;
             };
             let self_ty = self.ty(&self.self_ty(of));
-            self.line(
-                0,
-                &format!("${} = [", dict_global(of, tr)),
-            );
+            self.line(0, &format!("${} = [", dict_global(of, tr)));
             self.this = "$self";
 
             for f in impls {
@@ -1111,7 +1109,10 @@ impl<'a> Emitter<'a> {
         for name in constructed(m) {
             self.values.insert(name.to_owned());
             self.line(0, &format!("class {name} {{"));
-            self.line(1, "private function __construct(private string $tag, private mixed $value) {}");
+            self.line(
+                1,
+                "private function __construct(private string $tag, private mixed $value) {}",
+            );
 
             for variant in &m.enums[name].variants {
                 let wire = self.variant_name(name, variant.name());
@@ -1404,4 +1405,3 @@ fn to_camel_case(s: &str) -> String {
         })
         .collect()
 }
-

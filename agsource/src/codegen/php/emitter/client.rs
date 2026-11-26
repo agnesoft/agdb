@@ -22,7 +22,13 @@ impl Emitter<'_> {
         }
         if !self.config.types_require.is_empty() {
             self.line(0, "");
-            self.line(0, &format!("require_once __DIR__ . '/{}.php';", self.config.types_require));
+            self.line(
+                0,
+                &format!(
+                    "require_once __DIR__ . '/{}.php';",
+                    self.config.types_require
+                ),
+            );
         }
         self.line(0, "");
 
@@ -117,6 +123,10 @@ impl Emitter<'_> {
             .map(|(n, t)| format!("{} ${n}", self.ty(t)))
             .collect();
         let ret = self.return_ty(&f.ret);
-        format!("abstract public function {}({}): {ret}", f.name, params.join(", "))
+        format!(
+            "abstract public function {}({}): {ret}",
+            f.name,
+            params.join(", ")
+        )
     }
 }

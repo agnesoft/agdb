@@ -24,10 +24,10 @@ use agsource::codegen::pass::Resolve;
 use agsource::codegen::pass::TagResults;
 use agsource::codegen::pass::ThrowErrors;
 use agsource::codegen::pass::TraitDicts;
-use agsource::codegen::print;
-use agsource::codegen::routes;
 use agsource::codegen::php::Emitter as PhpEmitter;
 use agsource::codegen::php::PhpConfig;
+use agsource::codegen::print;
+use agsource::codegen::routes;
 use agsource::codegen::ts::AcceptElementSources;
 use agsource::codegen::ts::Emitter;
 use agsource::codegen::ts::EraseCasts;
@@ -245,11 +245,8 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(lowering);
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
     let fs = platform.fs();
-    let php_tests = PhpEmitter::new(&m, &php_config("")).tests(
-        "QueryBuilderTest",
-        "",
-        &[(DERIVED, "")],
-    );
+    let php_tests =
+        PhpEmitter::new(&m, &php_config("")).tests("QueryBuilderTest", "", &[(DERIVED, "")]);
     let php_route_tests = PhpEmitter::new(&routes, &php_config("test_server")).tests(
         "ApiTest",
         "",
@@ -294,7 +291,12 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     // ---- PHP generation from the same lowered modules ----
     let php_types = PhpEmitter::new(&m, &php_config("")).types();
     let php_builder = PhpEmitter::new(&m, &php_config("types")).module();
-    let php_client = php_client(platform, php_client_m, &dump.join("php_client"), &mut errors)?;
+    let php_client = php_client(
+        platform,
+        php_client_m,
+        &dump.join("php_client"),
+        &mut errors,
+    )?;
     fs.write(Path::new(root).join(PHP_TYPES), php_types.code)?;
     fs.write(Path::new(root).join(PHP), php_builder.code)?;
     fs.write(Path::new(root).join(PHP_API), php_client.code)?;

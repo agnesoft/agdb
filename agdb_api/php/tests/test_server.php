@@ -11,10 +11,10 @@
 
 namespace Agnesoft\AgdbApi;
 
-require_once __DIR__ . '/../src/types.php';
-require_once __DIR__ . '/../src/query_builder.php';
-require_once __DIR__ . '/../src/api.php';
-require_once __DIR__ . '/../src/curl_client.php';
+require_once __DIR__ . "/../src/types.php";
+require_once __DIR__ . "/../src/query_builder.php";
+require_once __DIR__ . "/../src/api.php";
+require_once __DIR__ . "/../src/curl_client.php";
 
 /** Shared monotonic counter for unique names across a test run. */
 class Counter
@@ -31,9 +31,9 @@ function env(string $name): string
 {
     $value = getenv($name);
 
-    if ($value === false || $value === '') {
+    if ($value === false || $value === "") {
         throw new \RuntimeException(
-            "$name is not set: run the tests with agdb_harness",
+            "$name is not set: run the tests with agdb_harness"
         );
     }
 
@@ -43,7 +43,7 @@ function env(string $name): string
 /** The name of the running test, used as the user-agent of its clients. */
 function test_agent_name(): string
 {
-    return 'agdb_api_test';
+    return "agdb_api_test";
 }
 
 function api_with_agent(string $address, string $agent): AgdbApi
@@ -58,12 +58,12 @@ function api_for_test(string $address): AgdbApi
 
 function next_user_name(): string
 {
-    return 'db_user' . getmypid() . '_' . Counter::next();
+    return "db_user" . getmypid() . "_" . Counter::next();
 }
 
 function next_db_name(): string
 {
-    return 'db' . getmypid() . '_' . Counter::next();
+    return "db" . getmypid() . "_" . Counter::next();
 }
 
 /**
@@ -73,16 +73,13 @@ function next_db_name(): string
  */
 class TestServer
 {
-    public function __construct(
-        public string $data_dir,
-        public AgdbApi $api,
-    ) {}
+    public function __construct(public string $data_dir, public AgdbApi $api) {}
 
     public static function new(): TestServer
     {
         return new TestServer(
-            env('AGDB_SERVER_DATA_DIR'),
-            api_for_test(env('AGDB_SERVER_ADDRESS')),
+            env("AGDB_SERVER_DATA_DIR"),
+            api_for_test(env("AGDB_SERVER_ADDRESS"))
         );
     }
 }
@@ -92,14 +89,14 @@ class TestCluster
 {
     public function __construct(
         public array $addresses,
-        public array $data_dirs,
+        public array $data_dirs
     ) {}
 
     public static function new(): TestCluster
     {
         return new TestCluster(
-            explode(',', env('AGDB_CLUSTER_ADDRESSES')),
-            explode(',', env('AGDB_CLUSTER_DATA_DIRS')),
+            explode(",", env("AGDB_CLUSTER_ADDRESSES")),
+            explode(",", env("AGDB_CLUSTER_DATA_DIRS"))
         );
     }
 

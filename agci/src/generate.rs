@@ -1,9 +1,7 @@
 use crate::CIError;
 use crate::roundtrip::host_cfg;
-use crate::utilities;
 use agplatform::Fs;
 use agplatform::Platform;
-use std::process::Command;
 
 use agsource::Cfg;
 use agsource::CfgSet;
@@ -416,7 +414,6 @@ fn emit_php(
     fs.write(Path::new(root).join(PHP_API), php_client.code)?;
     fs.write(Path::new(root).join(PHP_TESTS), php_tests.code)?;
     fs.write(Path::new(root).join(PHP_ROUTES), php_route_tests.code)?;
-    format_php(platform, root)?;
 
     let unsupported: Vec<String> = php_types
         .unsupported
@@ -468,15 +465,6 @@ fn php_config(types: &str) -> PhpConfig {
         namespace: "Agnesoft\\AgdbApi".into(),
         types_require: types.into(),
     }
-}
-
-/// Formats the generated PHP files with prettier so the output matches the project style.
-fn format_php(platform: &impl Platform, root: &str) -> Result<(), CIError> {
-    let php_dir = Path::new(root).join("agdb_api/php");
-    let mut cmd = Command::new("pnpm");
-    cmd.args(["run", "format"]).current_dir(&php_dir);
-    utilities::run_command(platform, &cmd)?;
-    Ok(())
 }
 
 // ── Pass runner ──────────────────────────────────────────────────────────

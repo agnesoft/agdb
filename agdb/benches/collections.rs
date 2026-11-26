@@ -43,7 +43,7 @@ fn dbs() -> Dbs {
     }
 }
 
-fn insert_remove_aliases<S: StorageData>(db: &mut DbImpl<S>) {
+fn insert_remove_aliases<S: StorageData>(db: &DbImpl<S>) {
     let aliases: Vec<String> = (0..ALIASES).map(|i| format!("alias{i}")).collect();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(&aliases).query())
         .unwrap();
@@ -54,13 +54,13 @@ fn insert_remove_aliases<S: StorageData>(db: &mut DbImpl<S>) {
 fn aliases(bench: &mut Bench) {
     bench
         .benchmark("collections/insert_remove_1000_aliases", dbs)
-        .target("mapped", |d| insert_remove_aliases(&mut d.mapped))
-        .target("memory", |d| insert_remove_aliases(&mut d.memory))
-        .target("file", |d| insert_remove_aliases(&mut d.file))
+        .target("mapped", |d| insert_remove_aliases(&d.mapped))
+        .target("memory", |d| insert_remove_aliases(&d.memory))
+        .target("file", |d| insert_remove_aliases(&d.file))
         .run();
 }
 
-fn indexed<S: StorageData>(db: &mut DbImpl<S>) {
+fn indexed<S: StorageData>(db: &DbImpl<S>) {
     db.exec_mut(QueryBuilder::insert().index("key").query())
         .unwrap();
     let values: Vec<Vec<DbKeyValue>> = (0..INDEXED)
@@ -76,7 +76,7 @@ fn spread(i: u64) -> u64 {
     i.wrapping_mul(0x9e37_79b9_7f4a_7c15)
 }
 
-fn update_and_search<S: StorageData>(db: &mut DbImpl<S>, next: &mut u64) {
+fn update_and_search<S: StorageData>(db: &DbImpl<S>, next: &mut u64) {
     let id = (*next % INDEXED) as i64 + 1;
     db.exec_mut(
         QueryBuilder::insert()
@@ -98,18 +98,14 @@ fn update_and_search<S: StorageData>(db: &mut DbImpl<S>, next: &mut u64) {
 fn index_update(bench: &mut Bench) {
     bench
         .benchmark("collections/index_update_and_search_miss", || {
-            let mut d = dbs();
-            indexed(&mut d.mapped);
-            indexed(&mut d.memory);
-            indexed(&mut d.file);
+            let d = dbs();
+            indexed(&d.mapped);
+            indexed(&d.memory);
+            indexed(&d.file);
             d
         })
-        .target("mapped", |d| {
-            update_and_search(&mut d.mapped, &mut d.next[0])
-        })
-        .target("memory", |d| {
-            update_and_search(&mut d.memory, &mut d.next[1])
-        })
-        .target("file", |d| update_and_search(&mut d.file, &mut d.next[2]))
+        .target("mapped", |d| update_and_search(&d.mapped, &mut d.next[0]))
+        .target("memory", |d| update_and_search(&d.memory, &mut d.next[1]))
+        .target("file", |d| update_and_search(&d.file, &mut d.next[2]))
         .run();
 }

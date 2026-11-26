@@ -584,7 +584,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
         }
 
         // Clear version store.
-        self.versions.lock().unwrap().entries.clear();  // HashMap::clear()
+        self.versions.lock().unwrap().entries.clear(); // HashMap::clear()
     }
 
     /// Atomically replaces the internal [`Root`] (and its storage) with
@@ -636,7 +636,6 @@ impl<S: StorageData> ConcurrentRoot<S> {
 
         Ok(())
     }
-
 }
 
 // ---------------------------------------------------------------------------

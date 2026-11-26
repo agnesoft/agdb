@@ -104,12 +104,8 @@ fn index_update(bench: &mut Bench) {
             indexed(&d.file);
             d
         })
-        .target("mapped", |d| {
-            update_and_search(&d.mapped, &mut d.next[0])
-        })
-        .target("memory", |d| {
-            update_and_search(&d.memory, &mut d.next[1])
-        })
+        .target("mapped", |d| update_and_search(&d.mapped, &mut d.next[0]))
+        .target("memory", |d| update_and_search(&d.memory, &mut d.next[1]))
         .target("file", |d| update_and_search(&d.file, &mut d.next[2]))
         .run();
 }

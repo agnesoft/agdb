@@ -29,7 +29,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use tokio::sync::RwLock;
 use tokio::sync::broadcast;
 
 #[derive(DbType)]
@@ -107,7 +106,7 @@ struct RoleEdge {
 
 #[derive(Clone)]
 pub(crate) struct ServerDb {
-    pub(crate) db: Arc<RwLock<Db>>,
+    pub(crate) db: Arc<Db>,
     pub(crate) token_expiry_seconds: u64,
 }
 
@@ -137,7 +136,7 @@ pub(crate) async fn new(
     let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
     let db = ServerDb::new(&db_name, config.token_expiry_seconds)?;
 
-    db.db.write().await.set_storage_config(config.storage);
+    db.db.set_storage_config(config.storage);
 
     let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
         admin_id
@@ -153,8 +152,6 @@ pub(crate) async fn new(
     };
 
     db.db
-        .write()
-        .await
         .exec_mut(QueryBuilder::insert().aliases(ADMIN).ids(admin).query())?;
 
     let expiry = config.token_expiry_seconds;
@@ -321,7 +318,7 @@ impl ServerDb {
         })?;
 
         Ok(Self {
-            db: Arc::new(RwLock::new(db)),
+            db: Arc::new(db),
             token_expiry_seconds,
         })
     }
@@ -329,8 +326,6 @@ impl ServerDb {
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(QueryBuilder::select().edge_count_from().ids(DBS).query())?
             .elements[0]
             .values[0]
@@ -342,8 +337,6 @@ impl ServerDb {
         let mut users = vec![];
 
         self.db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .search()
@@ -379,8 +372,6 @@ impl ServerDb {
 
     pub(crate) async fn dashboard(&self, owner: &str, name: &str) -> ServerResult<ServerDashboard> {
         self.db
-            .read()
-            .await
             .exec(find_dashboard_query(owner, name))?
             .try_into()
             .map_err(|_| dashboard_not_found(name))
@@ -394,102 +385,91 @@ impl ServerDb {
         owner: &str,
         name: &str,
     ) -> ServerResult<DashboardAccess> {
-        self.db
-            .read()
-            .await
-            .transaction(|t| -> ServerResult<DashboardAccess> {
-                let dashboard: ServerDashboard = t
-                    .exec(find_dashboard_query(owner, name))?
-                    .try_into()
-                    .map_err(|_| dashboard_not_found(name))?;
-                let id = dashboard.db_id.ok_or_else(|| dashboard_not_found(name))?;
-                let role = role_edges(&t.exec(dashboard_edges_query(id))?)
-                    .into_iter()
-                    .find(|edge| edge.from == user)
-                    .map(|edge| edge.role);
-                let public = !t.exec(public_edge_query(id))?.ids().is_empty();
-                match (role, public) {
-                    (Some(role), _) => Ok(DashboardAccess {
-                        dashboard,
-                        role,
-                        member: true,
-                        public,
-                    }),
-                    (None, true) => Ok(DashboardAccess {
-                        dashboard,
-                        role: DbUserRole::Read,
-                        member: false,
-                        public,
-                    }),
-                    (None, false) => Err(dashboard_not_found(name)),
-                }
-            })
+        self.db.transaction(|t| -> ServerResult<DashboardAccess> {
+            let dashboard: ServerDashboard = t
+                .exec(find_dashboard_query(owner, name))?
+                .try_into()
+                .map_err(|_| dashboard_not_found(name))?;
+            let id = dashboard.db_id.ok_or_else(|| dashboard_not_found(name))?;
+            let role = role_edges(&t.exec(dashboard_edges_query(id))?)
+                .into_iter()
+                .find(|edge| edge.from == user)
+                .map(|edge| edge.role);
+            let public = !t.exec(public_edge_query(id))?.ids().is_empty();
+            match (role, public) {
+                (Some(role), _) => Ok(DashboardAccess {
+                    dashboard,
+                    role,
+                    member: true,
+                    public,
+                }),
+                (None, true) => Ok(DashboardAccess {
+                    dashboard,
+                    role: DbUserRole::Read,
+                    member: false,
+                    public,
+                }),
+                (None, false) => Err(dashboard_not_found(name)),
+            }
+        })
     }
 
     /// Whether the dashboard is public.
     pub(crate) async fn dashboard_public(&self, dashboard: DbId) -> ServerResult<bool> {
-        Ok(!self
-            .db
-            .read()
-            .await
-            .exec(public_edge_query(dashboard))?
-            .ids()
-            .is_empty())
+        Ok(!self.db.exec(public_edge_query(dashboard))?.ids().is_empty())
     }
 
     /// Dashboards `user` has a role on (owned and shared) and the public
     /// ones, without their (possibly large) configs, sorted by owner and name.
     pub(crate) async fn user_dashboards(&self, user: DbId) -> ServerResult<Vec<DashboardSummary>> {
-        let mut dashboards =
-            self.db
-                .read()
-                .await
-                .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
-                    let all: HashSet<DbId> =
-                        t.exec(all_dashboards_query())?.ids().into_iter().collect();
-                    let public: HashSet<DbId> = t
-                        .exec(public_dashboards_query())?
-                        .ids()
-                        .into_iter()
-                        .collect();
-                    let roles: Vec<RoleEdge> = role_edges(&t.exec(user_edges_query(user))?)
-                        .into_iter()
-                        .filter(|edge| all.contains(&edge.to))
-                        .collect();
-                    let member: HashMap<DbId, DbUserRole> =
-                        roles.iter().map(|edge| (edge.to, edge.role)).collect();
-                    let ids: Vec<DbId> = member
-                        .keys()
-                        .copied()
-                        .chain(public.iter().copied().filter(|id| !member.contains_key(id)))
-                        .collect();
+        let mut dashboards = self
+            .db
+            .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
+                let all: HashSet<DbId> =
+                    t.exec(all_dashboards_query())?.ids().into_iter().collect();
+                let public: HashSet<DbId> = t
+                    .exec(public_dashboards_query())?
+                    .ids()
+                    .into_iter()
+                    .collect();
+                let roles: Vec<RoleEdge> = role_edges(&t.exec(user_edges_query(user))?)
+                    .into_iter()
+                    .filter(|edge| all.contains(&edge.to))
+                    .collect();
+                let member: HashMap<DbId, DbUserRole> =
+                    roles.iter().map(|edge| (edge.to, edge.role)).collect();
+                let ids: Vec<DbId> = member
+                    .keys()
+                    .copied()
+                    .chain(public.iter().copied().filter(|id| !member.contains_key(id)))
+                    .collect();
 
-                    if ids.is_empty() {
-                        return Ok(vec![]);
-                    }
+                if ids.is_empty() {
+                    return Ok(vec![]);
+                }
 
-                    let listings: Vec<DashboardListing> = t
-                        .exec(
-                            QueryBuilder::select()
-                                .elements::<DashboardListing>()
-                                .ids(ids)
-                                .query(),
-                        )?
-                        .try_into()?;
+                let listings: Vec<DashboardListing> = t
+                    .exec(
+                        QueryBuilder::select()
+                            .elements::<DashboardListing>()
+                            .ids(ids)
+                            .query(),
+                    )?
+                    .try_into()?;
 
-                    Ok(listings
-                        .into_iter()
-                        .map(|listing| {
-                            let role = listing.db_id.and_then(|id| member.get(&id).copied());
-                            summary(
-                                listing,
-                                role.unwrap_or(DbUserRole::Read),
-                                role.is_some(),
-                                &public,
-                            )
-                        })
-                        .collect())
-                })?;
+                Ok(listings
+                    .into_iter()
+                    .map(|listing| {
+                        let role = listing.db_id.and_then(|id| member.get(&id).copied());
+                        summary(
+                            listing,
+                            role.unwrap_or(DbUserRole::Read),
+                            role.is_some(),
+                            &public,
+                        )
+                    })
+                    .collect())
+            })?;
         dashboards.sort_by(|a, b| (&a.owner, &a.name).cmp(&(&b.owner, &b.name)));
         Ok(dashboards)
     }
@@ -497,32 +477,30 @@ impl ServerDb {
     /// Every dashboard for server admins, who act as their owners, sorted by
     /// owner and name.
     pub(crate) async fn dashboards(&self) -> ServerResult<Vec<DashboardSummary>> {
-        let mut dashboards =
-            self.db
-                .read()
-                .await
-                .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
-                    let public: HashSet<DbId> = t
-                        .exec(public_dashboards_query())?
-                        .ids()
-                        .into_iter()
-                        .collect();
-                    let listings: Vec<DashboardListing> = t
-                        .exec(
-                            QueryBuilder::select()
-                                .elements::<DashboardListing>()
-                                .search()
-                                .from(DASHBOARDS)
-                                .where_()
-                                .neighbor()
-                                .query(),
-                        )?
-                        .try_into()?;
-                    Ok(listings
-                        .into_iter()
-                        .map(|listing| summary(listing, DbUserRole::Admin, true, &public))
-                        .collect())
-                })?;
+        let mut dashboards = self
+            .db
+            .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
+                let public: HashSet<DbId> = t
+                    .exec(public_dashboards_query())?
+                    .ids()
+                    .into_iter()
+                    .collect();
+                let listings: Vec<DashboardListing> = t
+                    .exec(
+                        QueryBuilder::select()
+                            .elements::<DashboardListing>()
+                            .search()
+                            .from(DASHBOARDS)
+                            .where_()
+                            .neighbor()
+                            .query(),
+                    )?
+                    .try_into()?;
+                Ok(listings
+                    .into_iter()
+                    .map(|listing| summary(listing, DbUserRole::Admin, true, &public))
+                    .collect())
+            })?;
         dashboards.sort_by(|a, b| (&a.owner, &a.name).cmp(&(&b.owner, &b.name)));
         Ok(dashboards)
     }
@@ -534,97 +512,90 @@ impl ServerDb {
         dashboard: DbId,
         public: bool,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let edges: Vec<DbId> = t.exec(public_edge_query(dashboard))?.ids();
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            let edges: Vec<DbId> = t.exec(public_edge_query(dashboard))?.ids();
 
-                match (public, edges.is_empty()) {
-                    (true, true) => {
-                        t.exec_mut(
-                            QueryBuilder::insert()
-                                .edges()
-                                .from(PUBLIC_DASHBOARDS)
-                                .to(dashboard)
-                                .query(),
-                        )?;
-                    }
-                    (false, false) => {
-                        t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
-                        let incoming = t
-                            .exec(
-                                QueryBuilder::select()
-                                    .search()
-                                    .to(dashboard)
-                                    .where_()
-                                    .distance(1)
-                                    .query(),
-                            )?
-                            .elements;
-                        let members: Vec<DbId> = incoming
-                            .iter()
-                            .filter(|edge| has_key(edge, ROLE))
-                            .map(|edge| edge.from)
-                            .collect();
-                        let homes: Vec<DbId> = incoming
-                            .iter()
-                            .filter(|edge| {
-                                has_key(edge, HOME_DASHBOARD) && !members.contains(&edge.from)
-                            })
-                            .map(|edge| edge.id)
-                            .collect();
-                        if !homes.is_empty() {
-                            t.exec_mut(QueryBuilder::remove().ids(homes).query())?;
-                        }
-                    }
-                    _ => {}
+            match (public, edges.is_empty()) {
+                (true, true) => {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(PUBLIC_DASHBOARDS)
+                            .to(dashboard)
+                            .query(),
+                    )?;
                 }
-                Ok(())
-            })
+                (false, false) => {
+                    t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
+                    let incoming = t
+                        .exec(
+                            QueryBuilder::select()
+                                .search()
+                                .to(dashboard)
+                                .where_()
+                                .distance(1)
+                                .query(),
+                        )?
+                        .elements;
+                    let members: Vec<DbId> = incoming
+                        .iter()
+                        .filter(|edge| has_key(edge, ROLE))
+                        .map(|edge| edge.from)
+                        .collect();
+                    let homes: Vec<DbId> = incoming
+                        .iter()
+                        .filter(|edge| {
+                            has_key(edge, HOME_DASHBOARD) && !members.contains(&edge.from)
+                        })
+                        .map(|edge| edge.id)
+                        .collect();
+                    if !homes.is_empty() {
+                        t.exec_mut(QueryBuilder::remove().ids(homes).query())?;
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        })
     }
 
     /// Users with a role on the dashboard (including its owner) by name.
     pub(crate) async fn dashboard_users(&self, dashboard: DbId) -> ServerResult<Vec<DbUser>> {
-        let mut users = self
-            .db
-            .read()
-            .await
-            .transaction(|t| -> ServerResult<Vec<DbUser>> {
-                let edges = t.exec(
-                    QueryBuilder::select()
-                        .values([ROLE])
-                        .search()
-                        .to(dashboard)
-                        .where_()
-                        .distance(1)
-                        .and()
-                        .keys(ROLE)
-                        .query(),
-                )?;
+        let mut users = self.db.transaction(|t| -> ServerResult<Vec<DbUser>> {
+            let edges = t.exec(
+                QueryBuilder::select()
+                    .values([ROLE])
+                    .search()
+                    .to(dashboard)
+                    .where_()
+                    .distance(1)
+                    .and()
+                    .keys(ROLE)
+                    .query(),
+            )?;
 
-                edges
-                    .elements
-                    .iter()
-                    .map(|edge| {
-                        let username = t
-                            .exec(
-                                QueryBuilder::select()
-                                    .values(USERNAME)
-                                    .ids(edge.from)
-                                    .query(),
-                            )?
-                            .elements[0]
-                            .values[0]
-                            .value
-                            .to_string();
-                        Ok(DbUser {
-                            username,
-                            role: (&edge.values[0].value).into(),
-                        })
+            edges
+                .elements
+                .iter()
+                .map(|edge| {
+                    let username = t
+                        .exec(
+                            QueryBuilder::select()
+                                .values(USERNAME)
+                                .ids(edge.from)
+                                .query(),
+                        )?
+                        .elements[0]
+                        .values[0]
+                        .value
+                        .to_string();
+                    Ok(DbUser {
+                        username,
+                        role: (&edge.values[0].value).into(),
                     })
-                    .collect()
-            })?;
+                })
+                .collect()
+        })?;
         users.sort_by(|a, b| a.username.cmp(&b.username));
         Ok(users)
     }
@@ -636,33 +607,30 @@ impl ServerDb {
         user: DbId,
         role: DbUserRole,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let existing = role_edges(&t.exec(dashboard_edges_query(dashboard))?)
-                    .into_iter()
-                    .find(|edge| edge.from == user);
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            let existing = role_edges(&t.exec(dashboard_edges_query(dashboard))?)
+                .into_iter()
+                .find(|edge| edge.from == user);
 
-                if let Some(edge) = existing {
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .values([[(ROLE, role).into()]])
-                            .ids(edge.id)
-                            .query(),
-                    )?;
-                } else {
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from(user)
-                            .to(dashboard)
-                            .values_uniform([(ROLE, role).into()])
-                            .query(),
-                    )?;
-                }
-                Ok(())
-            })
+            if let Some(edge) = existing {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values([[(ROLE, role).into()]])
+                        .ids(edge.id)
+                        .query(),
+                )?;
+            } else {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(user)
+                        .to(dashboard)
+                        .values_uniform([(ROLE, role).into()])
+                        .query(),
+                )?;
+            }
+            Ok(())
+        })
     }
 
     /// Removes the role of `user` on the dashboard, and the dashboard as the
@@ -672,32 +640,27 @@ impl ServerDb {
         dashboard: DbId,
         user: DbId,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let public = !t.exec(public_edge_query(dashboard))?.ids().is_empty();
-                let edges: Vec<DbId> = t
-                    .exec(dashboard_edges_query(dashboard))?
-                    .elements
-                    .into_iter()
-                    .filter(|edge| edge.from == user)
-                    .filter(|edge| !public || !has_key(edge, HOME_DASHBOARD))
-                    .map(|edge| edge.id)
-                    .collect();
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            let public = !t.exec(public_edge_query(dashboard))?.ids().is_empty();
+            let edges: Vec<DbId> = t
+                .exec(dashboard_edges_query(dashboard))?
+                .elements
+                .into_iter()
+                .filter(|edge| edge.from == user)
+                .filter(|edge| !public || !has_key(edge, HOME_DASHBOARD))
+                .map(|edge| edge.id)
+                .collect();
 
-                if !edges.is_empty() {
-                    t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
-                }
-                Ok(())
-            })
+            if !edges.is_empty() {
+                t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
+            }
+            Ok(())
+        })
     }
 
     /// The dashboard `user` opens by default, if any.
     pub(crate) async fn home_dashboard(&self, user: DbId) -> ServerResult<Option<DashboardName>> {
         self.db
-            .read()
-            .await
             .transaction(|t| -> ServerResult<Option<DashboardName>> {
                 let Some(edge) = t.exec(home_edges_query(user))?.elements.into_iter().next() else {
                     return Ok(None);
@@ -723,37 +686,34 @@ impl ServerDb {
         user: DbId,
         dashboard: Option<DbId>,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let existing: Vec<DbId> = t
-                    .exec(home_edges_query(user))?
-                    .elements
-                    .into_iter()
-                    .map(|edge| edge.id)
-                    .collect();
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            let existing: Vec<DbId> = t
+                .exec(home_edges_query(user))?
+                .elements
+                .into_iter()
+                .map(|edge| edge.id)
+                .collect();
 
-                if !existing.is_empty() {
-                    t.exec_mut(QueryBuilder::remove().ids(existing).query())?;
-                }
+            if !existing.is_empty() {
+                t.exec_mut(QueryBuilder::remove().ids(existing).query())?;
+            }
 
-                if let Some(dashboard) = dashboard {
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from(user)
-                            .to(dashboard)
-                            .values_uniform([(HOME_DASHBOARD, true).into()])
-                            .query(),
-                    )?;
-                }
-                Ok(())
-            })
+            if let Some(dashboard) = dashboard {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(user)
+                        .to(dashboard)
+                        .values_uniform([(HOME_DASHBOARD, true).into()])
+                        .query(),
+                )?;
+            }
+            Ok(())
+        })
     }
 
     pub(crate) async fn remove_dashboard(&self, owner: &str, name: &str) -> ServerResult<()> {
-        self.db.write().await.exec_mut(
+        self.db.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .from(DASHBOARDS)
@@ -771,7 +731,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_dashboards(&self, owner: &str) -> ServerResult<()> {
-        self.db.write().await.exec_mut(
+        self.db.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .from(DASHBOARDS)
@@ -792,23 +752,20 @@ impl ServerDb {
         new_name: &str,
         updated: u64,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let mut dashboard: ServerDashboard = t
-                    .exec(find_dashboard_query(owner, name))?
-                    .try_into()
-                    .map_err(|_| dashboard_not_found(name))?;
-                // An add or rename applied after the request was checked may have taken the name.
-                if t.exec(find_dashboard_query(owner, new_name))?.result != 0 {
-                    return Err(dashboard_exists(new_name));
-                }
-                dashboard.name = new_name.to_string();
-                dashboard.updated = updated;
-                t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
-                Ok(())
-            })
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            let mut dashboard: ServerDashboard = t
+                .exec(find_dashboard_query(owner, name))?
+                .try_into()
+                .map_err(|_| dashboard_not_found(name))?;
+            // An add or rename applied after the request was checked may have taken the name.
+            if t.exec(find_dashboard_query(owner, new_name))?.result != 0 {
+                return Err(dashboard_exists(new_name));
+            }
+            dashboard.name = new_name.to_string();
+            dashboard.updated = updated;
+            t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
+            Ok(())
+        })
     }
 
     /// With `create` inserts a new dashboard owned (with the admin role) by
@@ -819,59 +776,54 @@ impl ServerDb {
         mut dashboard: ServerDashboard,
         create: bool,
     ) -> ServerResult<()> {
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                dashboard.db_id = t
-                    .exec(find_dashboard_query(&dashboard.owner, &dashboard.name))?
+        self.db.transaction_mut(|t| -> ServerResult<()> {
+            dashboard.db_id = t
+                .exec(find_dashboard_query(&dashboard.owner, &dashboard.name))?
+                .elements
+                .first()
+                .map(|e| e.id);
+
+            match (create, dashboard.db_id) {
+                (true, Some(_)) => return Err(dashboard_exists(&dashboard.name)),
+                // A remove or rename applied after the request was checked.
+                (false, None) => return Err(dashboard_not_found(&dashboard.name)),
+                _ => {}
+            }
+
+            if create {
+                let owner = t
+                    .exec(
+                        QueryBuilder::search()
+                            .index(USERNAME)
+                            .value(&dashboard.owner)
+                            .query(),
+                    )?
                     .elements
                     .first()
-                    .map(|e| e.id);
-
-                match (create, dashboard.db_id) {
-                    (true, Some(_)) => return Err(dashboard_exists(&dashboard.name)),
-                    // A remove or rename applied after the request was checked.
-                    (false, None) => return Err(dashboard_not_found(&dashboard.name)),
-                    _ => {}
-                }
-
-                if create {
-                    let owner = t
-                        .exec(
-                            QueryBuilder::search()
-                                .index(USERNAME)
-                                .value(&dashboard.owner)
-                                .query(),
-                        )?
-                        .elements
-                        .first()
-                        .map(|e| e.id)
-                        .ok_or_else(|| user_not_found(&dashboard.owner))?;
-                    let id = t
-                        .exec_mut(QueryBuilder::insert().element(&dashboard).query())?
-                        .elements[0]
-                        .id;
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from([QueryId::from(owner), DASHBOARDS.into()])
-                            .to(id)
-                            .values([vec![(ROLE, DbUserRole::Admin).into()], vec![]])
-                            .query(),
-                    )?;
-                } else {
-                    t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
-                }
-                Ok(())
-            })
+                    .map(|e| e.id)
+                    .ok_or_else(|| user_not_found(&dashboard.owner))?;
+                let id = t
+                    .exec_mut(QueryBuilder::insert().element(&dashboard).query())?
+                    .elements[0]
+                    .id;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from([QueryId::from(owner), DASHBOARDS.into()])
+                        .to(id)
+                        .values([vec![(ROLE, DbUserRole::Admin).into()], vec![]])
+                        .query(),
+                )?;
+            } else {
+                t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
+            }
+            Ok(())
+        })
     }
 
     pub(crate) async fn dbs(&self) -> ServerResult<Vec<Database>> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Database>()
@@ -892,8 +844,6 @@ impl ServerDb {
     ) -> ServerResult<Option<DbId>> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(find_user_db_query(user, owner, db))?
             .elements
             .first()
@@ -903,8 +853,6 @@ impl ServerDb {
     pub(crate) async fn find_user_id(&self, username: &str) -> ServerResult<Option<DbId>> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::search()
                     .index(USERNAME)
@@ -917,7 +865,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn insert_db(&self, owner: DbId, db: Database) -> ServerResult<DbId> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(&db).query())?
                 .elements[0]
@@ -940,7 +888,7 @@ impl ServerDb {
         user: DbId,
         role: DbUserRole,
     ) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let existing_role = t.exec(
                 QueryBuilder::search()
                     .from(user)
@@ -973,7 +921,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn insert_user(&self, user: ServerUser) -> ServerResult<DbId> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(&user).query())?
                 .elements[0]
@@ -984,7 +932,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn is_admin(&self, token: &str) -> ServerResult<bool> {
-        self.db.read().await.transaction(|t| {
+        self.db.transaction(|t| {
             let (id, expires_at) = t
                 .exec(
                     QueryBuilder::select()
@@ -1012,8 +960,6 @@ impl ServerDb {
     pub(crate) async fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::search()
                     .from(user)
@@ -1031,7 +977,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, owner: &str, db: &str) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let db_id = t
                 .exec(find_user_db_query(user, owner, db))?
                 .elements
@@ -1046,7 +992,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult<()> {
-        self.db.write().await.exec_mut(
+        self.db.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .from(user)
@@ -1080,16 +1026,13 @@ impl ServerDb {
                 }
             });
 
-        self.db
-            .write()
-            .await
-            .exec_mut(QueryBuilder::remove().ids(ids).query())?;
+        self.db.exec_mut(QueryBuilder::remove().ids(ids).query())?;
 
         Ok(dbs)
     }
 
     pub(crate) async fn remove_all_tokens(&self) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let users = t
                 .exec(
                     QueryBuilder::search()
@@ -1122,7 +1065,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_tokens(&self, user: DbId) -> ServerResult<()> {
-        self.db.write().await.exec_mut(
+        self.db.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .to(user)
@@ -1138,8 +1081,6 @@ impl ServerDb {
 
     pub(crate) async fn save_db(&self, db: &Database) -> ServerResult<()> {
         self.db
-            .write()
-            .await
             .exec_mut(QueryBuilder::insert().element(db).query())?;
         Ok(())
     }
@@ -1153,50 +1094,43 @@ impl ServerDb {
     ) -> ServerResult<DbId> {
         let created = current_timestamp();
         let expires_at = created + self.token_expiry_seconds;
-        self.db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<DbId> {
-                let token_id = t
-                    .exec_mut(
-                        QueryBuilder::insert()
-                            .element(&UserToken {
-                                db_id: None,
-                                token: token.to_string(),
-                                created,
-                                expires_at,
-                                agent,
-                                session,
-                            })
-                            .query(),
-                    )?
-                    .elements[0]
-                    .id;
-
-                t.exec_mut(
+        self.db.transaction_mut(|t| -> ServerResult<DbId> {
+            let token_id = t
+                .exec_mut(
                     QueryBuilder::insert()
-                        .edges()
-                        .from(token_id)
-                        .to(user)
+                        .element(&UserToken {
+                            db_id: None,
+                            token: token.to_string(),
+                            created,
+                            expires_at,
+                            agent,
+                            session,
+                        })
                         .query(),
-                )?;
+                )?
+                .elements[0]
+                .id;
 
-                Ok(token_id)
-            })
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(token_id)
+                    .to(user)
+                    .query(),
+            )?;
+
+            Ok(token_id)
+        })
     }
 
     pub(crate) async fn save_user(&self, user: ServerUser) -> ServerResult<()> {
         self.db
-            .write()
-            .await
             .exec_mut(QueryBuilder::insert().element(&user).query())?;
         Ok(())
     }
 
     pub(crate) async fn user(&self, username: &str) -> ServerResult<ServerUser> {
         self.db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<ServerUser>()
@@ -1212,8 +1146,6 @@ impl ServerDb {
     pub(crate) async fn user_name(&self, id: DbId) -> ServerResult<String> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(QueryBuilder::select().values(USERNAME).ids(id).query())?
             .elements[0]
             .values[0]
@@ -1224,8 +1156,6 @@ impl ServerDb {
     pub(crate) async fn user_by_id(&self, id: DbId) -> ServerResult<ServerUser> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<ServerUser>()
@@ -1242,8 +1172,6 @@ impl ServerDb {
         db: &str,
     ) -> ServerResult<Database> {
         self.db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Database>()
@@ -1268,8 +1196,6 @@ impl ServerDb {
     ) -> ServerResult<DbUserRole> {
         Ok((&self
             .db
-            .read()
-            .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
                     .exec(find_user_db_query(user, owner, db))?
@@ -1302,8 +1228,6 @@ impl ServerDb {
 
         let elements = self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .search()
@@ -1340,8 +1264,6 @@ impl ServerDb {
     pub(crate) async fn user_count(&self) -> ServerResult<u64> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(QueryBuilder::select().edge_count_from().ids(USERS).query())?
             .elements[0]
             .values[0]
@@ -1358,8 +1280,6 @@ impl ServerDb {
     pub(crate) async fn users_with_token(&self) -> ServerResult<u64> {
         Ok(self
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::search()
                     .from(USERS)
@@ -1370,11 +1290,11 @@ impl ServerDb {
                     .edge_count_to(1)
                     .query(),
             )?
-            .result as u64)
+            .result)
     }
 
     pub(crate) async fn user_id_from_token(&self, token: &str) -> ServerResult<DbId> {
-        self.db.read().await.transaction(|t| {
+        self.db.transaction(|t| {
             let (token_id, expires_at) = t
                 .exec(
                     QueryBuilder::select()
@@ -1409,51 +1329,42 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
-        Ok(self
-            .db
-            .read()
-            .await
-            .exec(user_sessions_query(user_id))?
-            .try_into()?)
+        Ok(self.db.exec(user_sessions_query(user_id))?.try_into()?)
     }
 
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
-        self.db
-            .read()
-            .await
-            .transaction(|t| -> ServerResult<Vec<UserStatus>> {
-                let admin_id = t
-                    .exec(QueryBuilder::select().aliases().ids(ADMIN).query())?
-                    .elements[0]
-                    .id;
-                t.exec(
-                    QueryBuilder::select()
-                        .values([USERNAME])
-                        .search()
-                        .from(USERS)
-                        .where_()
-                        .neighbor()
-                        .query(),
-                )?
-                .elements
-                .into_iter()
-                .map(|e| {
-                    let sessions: Vec<UserSession> =
-                        t.exec(user_sessions_query(e.id))?.try_into()?;
+        self.db.transaction(|t| -> ServerResult<Vec<UserStatus>> {
+            let admin_id = t
+                .exec(QueryBuilder::select().aliases().ids(ADMIN).query())?
+                .elements[0]
+                .id;
+            t.exec(
+                QueryBuilder::select()
+                    .values([USERNAME])
+                    .search()
+                    .from(USERS)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| {
+                let sessions: Vec<UserSession> = t.exec(user_sessions_query(e.id))?.try_into()?;
 
-                    Ok(UserStatus {
-                        username: e.values[0].value.to_string(),
-                        login: !sessions.is_empty(),
-                        admin: e.id == admin_id,
-                        sessions,
-                    })
+                Ok(UserStatus {
+                    username: e.values[0].value.to_string(),
+                    login: !sessions.is_empty(),
+                    admin: e.id == admin_id,
+                    sessions,
                 })
-                .collect::<ServerResult<Vec<UserStatus>>>()
             })
+            .collect::<ServerResult<Vec<UserStatus>>>()
+        })
     }
 
     pub(crate) async fn remove_expired_tokens(&self) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let users = t
                 .exec(
                     QueryBuilder::search()
@@ -1486,7 +1397,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_token(&self, token: &str) -> ServerResult<()> {
-        self.db.write().await.exec_mut(
+        self.db.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .index(TOKEN)
@@ -1497,7 +1408,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_tokens_except(&self, user: DbId, token: &str) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             t.exec_mut(
                 QueryBuilder::remove()
                     .search()
@@ -1519,7 +1430,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_session(&self, session: String) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
+        self.db.transaction_mut(|t| {
             let removed = t.exec_mut(
                 QueryBuilder::remove()
                     .search()
@@ -2100,27 +2011,24 @@ mod tests {
             let db = ServerDb::new(test_file.file_name(), 3600)?;
             test_user(&db, "user").await?;
             // A dashboard saved before owners got their role edge.
-            db.db
-                .read()
-                .await
-                .transaction_mut(|t| -> ServerResult<()> {
-                    let id = t
-                        .exec_mut(
-                            QueryBuilder::insert()
-                                .element(test_dashboard("user", "old"))
-                                .query(),
-                        )?
-                        .elements[0]
-                        .id;
-                    t.exec_mut(
+            db.db.transaction_mut(|t| -> ServerResult<()> {
+                let id = t
+                    .exec_mut(
                         QueryBuilder::insert()
-                            .edges()
-                            .from(DASHBOARDS)
-                            .to(id)
+                            .element(test_dashboard("user", "old"))
                             .query(),
-                    )?;
-                    Ok(())
-                })?;
+                    )?
+                    .elements[0]
+                    .id;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(DASHBOARDS)
+                        .to(id)
+                        .query(),
+                )?;
+                Ok(())
+            })?;
         }
 
         let db = ServerDb::new(test_file.file_name(), 3600)?;
@@ -2173,8 +2081,6 @@ mod tests {
         let db = ServerDb::new(test_file.file_name(), 3600)?;
         let dbs: Vec<Database> = db
             .db
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Database>()
@@ -2226,7 +2132,7 @@ mod tests {
         db.save_token(user2, "token4", "agent".to_string(), String::new())
             .await?;
 
-        db.db.write().await.exec_mut(
+        db.db.exec_mut(
             QueryBuilder::insert()
                 .values_uniform([(EXPIRES_AT, 0_u64).into()])
                 .ids([expired1, expired2])

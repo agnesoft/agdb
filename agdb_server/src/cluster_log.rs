@@ -11,10 +11,9 @@ use agdb::QueryBuilder;
 use agdb::StorageData;
 use agdb::Transaction;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Clone)]
-pub(crate) struct ClusterLog(pub(crate) Arc<RwLock<Db>>);
+pub(crate) struct ClusterLog(pub(crate) Arc<Db>);
 
 const CLUSTER_LOG: &str = "cluster_log";
 const EXECUTED: &str = "executed";
@@ -29,7 +28,7 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
     let log = ClusterLog::new(&file)?;
-    log.0.write().await.set_storage_config(config.storage);
+    log.0.set_storage_config(config.storage);
 
     Ok(log)
 }
@@ -64,11 +63,11 @@ impl ClusterLog {
             Ok(())
         })?;
 
-        Ok(Self(Arc::new(RwLock::new(db))))
+        Ok(Self(Arc::new(db)))
     }
 
     pub(crate) async fn append_log(&self, log: &Log<ClusterAction>) -> ServerResult<DbId> {
-        self.0.write().await.transaction_mut(
+        self.0.transaction_mut(
             |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| {
                 let log_id = t
                     .exec_mut(QueryBuilder::insert().element(log).query())?
@@ -93,7 +92,7 @@ impl ClusterLog {
     }
 
     pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64, u64)> {
-        self.0.write().await.transaction_mut(|t| {
+        self.0.transaction_mut(|t| {
             if let Some(e) = t
                 .exec(
                     QueryBuilder::select()
@@ -145,16 +144,12 @@ impl ClusterLog {
 
     pub(crate) async fn log_committed(&self, log_id: DbId) -> ServerResult<()> {
         self.0
-            .write()
-            .await
             .exec_mut(QueryBuilder::remove().values(COMMITTED).ids(log_id).query())?;
         Ok(())
     }
 
     pub(crate) async fn log_executed(&self, log_id: DbId) -> ServerResult<()> {
         self.0
-            .write()
-            .await
             .exec_mut(QueryBuilder::remove().values(EXECUTED).ids(log_id).query())?;
         Ok(())
     }
@@ -174,7 +169,7 @@ impl ClusterLog {
     }
 
     async fn logs_until(&self, index: u64, label: &str) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.0.read().await.transaction(|t| {
+        self.0.transaction(|t| {
             let mut log_ids: Vec<(u64, DbId)> = t
                 .exec(
                     QueryBuilder::select()
@@ -202,7 +197,7 @@ impl ClusterLog {
     }
 
     pub(crate) async fn prune(&self, up_to_index: u64) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.0.transaction_mut(|t| {
             t.exec_mut(
                 QueryBuilder::remove()
                     .search()
@@ -226,7 +221,7 @@ impl ClusterLog {
     }
 
     pub(crate) async fn remove_uncommitted_logs(&self, from_index: u64) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.0.transaction_mut(|t| {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
@@ -256,7 +251,7 @@ impl ClusterLog {
     }
 
     pub(crate) async fn set_log_failed(&self, log_id: DbId) -> ServerResult<()> {
-        self.0.write().await.exec_mut(
+        self.0.exec_mut(
             QueryBuilder::insert()
                 .values([[(LOG_FAILED, true).into()]])
                 .ids(log_id)
@@ -270,7 +265,7 @@ impl ClusterLog {
             return Ok(());
         }
 
-        self.0.write().await.exec_mut(
+        self.0.exec_mut(
             QueryBuilder::remove()
                 .values(LOG_FAILED)
                 .search()
@@ -292,8 +287,6 @@ impl ClusterLog {
     pub(crate) async fn failed_indices(&self) -> ServerResult<Vec<u64>> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .values(INDEX)
@@ -315,8 +308,6 @@ impl ClusterLog {
     pub(crate) async fn action_at_index(&self, index: u64) -> ServerResult<Option<ClusterAction>> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .element::<Log<ClusterAction>>()
@@ -341,7 +332,7 @@ impl ClusterLog {
         &self,
         from_index: u64,
     ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.0.read().await.transaction(|t| {
+        self.0.transaction(|t| {
             let log_ids = t
                 .exec(
                     QueryBuilder::select()
@@ -383,8 +374,6 @@ pub(crate) async fn migrate_from_server_db(
 ) -> ServerResult<()> {
     if server_db
         .db
-        .read()
-        .await
         .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
         .is_err()
     {
@@ -393,8 +382,6 @@ pub(crate) async fn migrate_from_server_db(
 
     if cluster_log
         .0
-        .read()
-        .await
         .exec(
             QueryBuilder::select()
                 .edge_count_from()
@@ -415,8 +402,6 @@ pub(crate) async fn migrate_from_server_db(
     let mut log_ids = Vec::new();
     let logs = server_db
         .db
-        .read()
-        .await
         .exec(
             QueryBuilder::select()
                 .search()
@@ -437,7 +422,7 @@ pub(crate) async fn migrate_from_server_db(
         .rev()
         .collect::<Vec<_>>();
 
-    cluster_log.0.write().await.transaction_mut(|t| {
+    cluster_log.0.transaction_mut(|t| {
         let ids = t.exec_mut(QueryBuilder::insert().nodes().values(logs).query())?;
         t.exec_mut(
             QueryBuilder::insert()
@@ -448,7 +433,7 @@ pub(crate) async fn migrate_from_server_db(
         )
     })?;
 
-    server_db.db.write().await.transaction_mut(|t| {
+    server_db.db.transaction_mut(|t| {
         t.exec_mut(QueryBuilder::remove().index(COMMITTED).query())?;
         t.exec_mut(QueryBuilder::remove().index(EXECUTED).query())?;
         t.exec_mut(QueryBuilder::remove().ids(log_ids).query())?;
@@ -554,54 +539,50 @@ mod tests {
         server_db: &ServerDb,
         logs: &[Log<ClusterAction>],
     ) -> ServerResult<()> {
-        server_db
-            .db
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<()> {
-                let indexes: Vec<String> =
-                    t.exec(QueryBuilder::select().indexes().query())?.elements[0]
-                        .values
-                        .iter()
-                        .map(|kv| kv.key.to_string())
-                        .collect();
+        server_db.db.transaction_mut(|t| -> ServerResult<()> {
+            let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements
+                [0]
+            .values
+            .iter()
+            .map(|kv| kv.key.to_string())
+            .collect();
 
-                if !indexes.iter().any(|index| index == EXECUTED) {
-                    t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
-                }
+            if !indexes.iter().any(|index| index == EXECUTED) {
+                t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
+            }
 
-                if !indexes.iter().any(|index| index == COMMITTED) {
-                    t.exec_mut(QueryBuilder::insert().index(COMMITTED).query())?;
-                }
+            if !indexes.iter().any(|index| index == COMMITTED) {
+                t.exec_mut(QueryBuilder::insert().index(COMMITTED).query())?;
+            }
 
-                if t.exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
-                    .is_err()
-                {
-                    t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
-                }
+            if t.exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
+                .is_err()
+            {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
+            }
 
-                for log in logs {
-                    let log_id = t
-                        .exec_mut(QueryBuilder::insert().element(log).query())?
-                        .elements[0]
-                        .id;
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .values([[(COMMITTED, false).into(), (EXECUTED, false).into()]])
-                            .ids(log_id)
-                            .query(),
-                    )?;
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from(CLUSTER_LOG)
-                            .to(log_id)
-                            .query(),
-                    )?;
-                }
+            for log in logs {
+                let log_id = t
+                    .exec_mut(QueryBuilder::insert().element(log).query())?
+                    .elements[0]
+                    .id;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values([[(COMMITTED, false).into(), (EXECUTED, false).into()]])
+                        .ids(log_id)
+                        .query(),
+                )?;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(CLUSTER_LOG)
+                        .to(log_id)
+                        .query(),
+                )?;
+            }
 
-                Ok(())
-            })?;
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -609,8 +590,6 @@ mod tests {
     async fn legacy_server_log_exists(server_db: &ServerDb) -> bool {
         server_db
             .db
-            .read()
-            .await
             .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
             .is_ok()
     }

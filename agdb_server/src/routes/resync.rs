@@ -236,11 +236,11 @@ async fn stage_snapshot_files(
 
     let dbs = server_db.dbs().await?;
 
-    let db_inner = server_db.db.clone();
-    tokio::task::spawn_blocking(move || db_inner.blocking_write().sync()).await??;
+    let db_ref = server_db.db.clone();
+    tokio::task::spawn_blocking(move || db_ref.sync()).await??;
 
-    let log_inner = cluster_log_ref.0.clone();
-    tokio::task::spawn_blocking(move || log_inner.blocking_write().sync()).await??;
+    let log_ref = cluster_log_ref.0.clone();
+    tokio::task::spawn_blocking(move || log_ref.sync()).await??;
 
     let db_entries: Vec<_> = {
         let pool = db_pool_ref.pool.read().await;
@@ -298,18 +298,16 @@ async fn stage_snapshot_files(
         .to_str()
         .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
-    let log_inner = cluster_log_ref.0.clone();
-    tokio::task::spawn_blocking(move || log_inner.blocking_read().backup(&cluster_log_staging_str))
-        .await??;
+    let log_ref = cluster_log_ref.0.clone();
+    tokio::task::spawn_blocking(move || log_ref.backup(&cluster_log_staging_str)).await??;
 
     let server_db_tmp = staging_dir.join(".server_db_tmp");
     let server_db_tmp_str = server_db_tmp
         .to_str()
         .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
-    let db_inner = server_db.db.clone();
-    tokio::task::spawn_blocking(move || db_inner.blocking_read().backup(&server_db_tmp_str))
-        .await??;
+    let db_ref = server_db.db.clone();
+    tokio::task::spawn_blocking(move || db_ref.backup(&server_db_tmp_str)).await??;
     std::fs::rename(&server_db_tmp, staging_dir.join(SERVER_DB_FILE))?;
 
     std::fs::write(
@@ -855,8 +853,8 @@ pub(crate) async fn snapshot_server_db(
         .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
 
-    let db_arc = server_db.db.clone();
-    tokio::task::spawn_blocking(move || db_arc.blocking_read().backup(&staging_path)).await??;
+    let db_ref = server_db.db.clone();
+    tokio::task::spawn_blocking(move || db_ref.backup(&staging_path)).await??;
 
     cluster.snapshot_in_flight.fetch_add(1, Ordering::Release);
 

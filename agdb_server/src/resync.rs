@@ -748,9 +748,8 @@ pub(crate) async fn resync_single_db(
             }
         }
 
-        let mut db_guard = server_db.db.write().await;
         std::fs::rename(&server_db_tmp, &server_db_dst)?;
-        *db_guard = agdb::Db::new(
+        server_db.db.restore(
             server_db_dst
                 .to_str()
                 .ok_or_else(|| ServerError::from("invalid server_db path"))?,

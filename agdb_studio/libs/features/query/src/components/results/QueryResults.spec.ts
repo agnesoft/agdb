@@ -516,6 +516,12 @@ describe("QueryResults", () => {
     expect(store.getQuery("q1")?.value.colors?.rows.r).toBe(1);
     expect(toggle.classes()).toContain("colored");
     expect(toggle.findAll(".used-colors span")).toHaveLength(1);
+    // A slot beyond the palette, e.g. from a stored config, has no dot.
+    store.getQuery("q1")!.value.colors!.rows.r = 99; // A slot beyond the palette
+    await nextTick();
+    expect(wrapper.find(".used-colors span")).toHaveLength(0); // The extra slot has no dot
+    store.getQuery("q1")!.value.colors!.rows.r = 1; // Restore a valid slot
+    await nextTick();
     expect(wrapper.get("[data-testid=color-legend]").text()).toContain(
       "query 0",
     );

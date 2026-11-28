@@ -237,12 +237,14 @@ const colored = computed(() => hasColoring(query.value?.colors));
 /** The colours in use, shown on the toolbar button. */
 const usedColors = computed(() => [
   ...new Set(
-    actions.colorLegend.value.map((entry) =>
+    actions.colorLegend.value.flatMap((entry) => {
       // A gradient (by value or distance) shows as one dot per scale, not per step.
-      "ramp" in entry.color
-        ? rampGradient(ramps.value[entry.color.scale], "to bottom")
-        : resolveColor(palette.value, ramps.value, entry.color),
-    ),
+      const color =
+        "ramp" in entry.color
+          ? rampGradient(ramps.value[entry.color.scale], "to bottom")
+          : resolveColor(palette.value, ramps.value, entry.color);
+      return color ? [color] : [];
+    }),
   ),
 ]);
 const menuColor = computed(() => {

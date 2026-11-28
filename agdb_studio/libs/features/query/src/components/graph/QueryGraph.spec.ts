@@ -9,6 +9,7 @@ import {
 } from "vitest";
 import { mount } from "@vue/test-utils";
 import QueryGraph from "./QueryGraph.vue";
+import type { ColorRef } from "../../utils/graphColorRules";
 import ForceGraph3D from "3d-force-graph";
 import { nextTick, reactive, ref } from "vue";
 import {
@@ -382,7 +383,7 @@ describe("QueryGraph", () => {
       unpin: vi.fn(),
       paletteSize: ref(5),
       colorResolver: ref({}),
-      colorSlotOf: vi.fn((): number | undefined => undefined),
+      colorOf: vi.fn((): ColorRef | undefined => undefined),
       clickNode: vi.fn(),
       openMenu: vi.fn(),
       closeMenu: vi.fn(),

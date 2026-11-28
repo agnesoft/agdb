@@ -97,7 +97,7 @@ onUnmounted(() => {
 <style lang="less" scoped>
 .graph-context-menu {
   position: fixed;
-  z-index: var(--z-index-dropdown);
+  z-index: var(--z-index-context-menu);
 }
 .menu-colors {
   display: flex;

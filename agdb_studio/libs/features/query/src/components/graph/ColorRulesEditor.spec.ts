@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
 import ColorRulesEditor from "./ColorRulesEditor.vue";
+import { GRAPH_THEME_FALLBACK } from "../../utils/graphStyle";
+
+const ramps = { ...GRAPH_THEME_FALLBACK.ramps, teal: ["#000000", "#ffffff"] };
 import type { ColorRule } from "../../utils/graphColorRules";
 
 const palette = ["#111111", "#222222", "#333333"];
@@ -32,7 +35,7 @@ const keys = [
 const mountEditor = (props: Record<string, unknown> = {}) =>
   mount(ColorRulesEditor, {
     attachTo: document.body,
-    props: { rules, palette, keys, ...props },
+    props: { rules, palette, ramps, keys, ...props },
   });
 
 const lastRules = (wrapper: ReturnType<typeof mountEditor>) =>
@@ -145,6 +148,104 @@ describe("ColorRulesEditor", () => {
     await wrapper.findAll("[data-testid=swatch]")[2]?.trigger("click");
     expect(lastRules(wrapper)[1]).toMatchObject({ id: "b", color: 2 });
     expect(lastRules(wrapper)[0]).toEqual(rules[0]);
+    wrapper.unmount();
+  });
+
+  it("offers a gradient for numeric keys only and lists gradient and distance rules", async () => {
+    const wrapper = mountEditor({
+      rules: [
+        { kind: "gradient", id: "g", key: "age" },
+        { kind: "distance", id: "s", from: "start" },
+        { kind: "distance", id: "n", from: 4 },
+      ],
+      keys: [
+        { key: "age", numeric: true, values: [{ value: "3", count: 1 }] },
+        ...keys,
+      ],
+      elementLabel: (id: number) => `node ${id} (dave)`,
+    });
+    expect(
+      wrapper.findAll("[data-testid=color-rule]").map((r) => r.text()),
+    ).toEqual([
+      expect.stringContaining("age: gradient"),
+      expect.stringContaining("distance from the search start"),
+      expect.stringContaining("distance from node 4 (dave)"),
+    ]);
+    expect(wrapper.findAll("[data-testid=ramp-trigger]")).toHaveLength(3);
+
+    await wrapper.get("[data-testid=color-rule-key]").setValue("role");
+    expect(optionTexts(wrapper, "color-rule-which")).not.toContain(
+      "a gradient",
+    );
+    await wrapper.get("[data-testid=color-rule-key]").setValue("age");
+    expect(optionTexts(wrapper, "color-rule-which")).toContain("a gradient");
+    await wrapper
+      .get("[data-testid=color-rule-which]")
+      .setValue("__gradient__");
+    // A gradient has no single colour to pick.
+    expect(wrapper.find("[data-testid=swatch-trigger]").exists()).toBe(false);
+    await wrapper.get("form").trigger("submit");
+    expect(lastRules(wrapper).at(-1)).toEqual({
+      kind: "gradient",
+      id: expect.any(String),
+      key: "age",
+      // Teal is taken by the rules above.
+      scale: "purple",
+    });
+    wrapper.unmount();
+  });
+
+  it("changes the scale of a gradient or distance rule", async () => {
+    const wrapper = mountEditor({
+      rules: [
+        { kind: "palette", id: "p", key: "role" },
+        { kind: "distance", id: "d", from: "start" },
+      ],
+    });
+    const trigger = wrapper.get("[data-testid=ramp-trigger]");
+    expect(trigger.attributes("aria-label")).toBe("Gradient colours: Teal");
+    await trigger.trigger("click");
+    const options = wrapper.findAll("[data-testid=ramp-option]");
+    expect(options.map((o) => o.text())).toEqual([
+      "Teal",
+      "Purple",
+      "Rose",
+      "Several colours",
+    ]);
+    expect(options[0]?.attributes("aria-pressed")).toBe("true");
+    await options[2]?.trigger("click");
+    expect(lastRules(wrapper)).toEqual([
+      { kind: "palette", id: "p", key: "role" },
+      { kind: "distance", id: "d", from: "start", scale: "rose" },
+    ]);
+    expect(wrapper.find("[data-testid=ramp-option]").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("drops the gradient choice when the key is no longer numeric", async () => {
+    const age = { key: "age", values: [{ value: "3", count: 1 }] };
+    const wrapper = mountEditor({ keys: [{ ...age, numeric: true }] });
+    await wrapper.get("[data-testid=color-rule-key]").setValue("age");
+    await wrapper
+      .get("[data-testid=color-rule-which]")
+      .setValue("__gradient__");
+    await wrapper.setProps({ keys: [{ ...age, numeric: false }] });
+    expect(
+      (
+        wrapper.get("[data-testid=color-rule-which]")
+          .element as HTMLSelectElement
+      ).value,
+    ).toBe("__each__");
+    wrapper.unmount();
+  });
+
+  it("labels a distance rule by id without a label function", () => {
+    const wrapper = mountEditor({
+      rules: [{ kind: "distance", id: "n", from: 7 }],
+    });
+    expect(wrapper.get("[data-testid=color-rule]").text()).toContain(
+      "distance from element 7",
+    );
     wrapper.unmount();
   });
 });

@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 import { computed } from "vue";
-import type { ColorSource, LegendEntry } from "../../utils/graphColorRules";
+import {
+  resolveColor,
+  type ColorSource,
+  type LegendEntry,
+  type LegendScale,
+} from "../../utils/graphColorRules";
+import { rampGradient, type RampName } from "../../utils/graphStyle";
 
 /**
  * What the graph's colours mean, so they never carry meaning on their own.
@@ -10,6 +16,7 @@ import type { ColorSource, LegendEntry } from "../../utils/graphColorRules";
 const props = defineProps<{
   entries: readonly LegendEntry[];
   palette: readonly string[];
+  ramps: Readonly<Record<RampName, readonly string[]>>;
 }>();
 
 const emit = defineEmits<{ edit: [] }>();
@@ -26,6 +33,13 @@ const groups = computed(() =>
     entries: props.entries.filter((entry) => entry.source === group.source),
   })).filter((group) => group.entries.length),
 );
+
+/** A gradient entry's scale as a CSS background, its strong end where it says. */
+const scaleBackground = (scale: LegendScale) =>
+  rampGradient(
+    props.ramps[scale.ramp],
+    scale.descending ? "to left" : "to right",
+  );
 </script>
 
 <template>
@@ -44,12 +58,28 @@ const groups = computed(() =>
           class="legend-entry"
           data-testid="color-legend-entry"
         >
-          <span
-            class="legend-swatch"
-            :style="{ backgroundColor: palette[entry.slot] }"
-            aria-hidden="true"
-          ></span>
-          <span class="legend-label">{{ entry.label }}</span>
+          <template v-if="entry.scale">
+            <span class="legend-label">{{ entry.label }}</span>
+            <span class="legend-scale" data-testid="color-legend-scale">
+              <span class="scale-end">{{ entry.scale.start }}</span>
+              <span
+                class="scale-bar"
+                :style="{ background: scaleBackground(entry.scale) }"
+                aria-hidden="true"
+              ></span>
+              <span class="scale-end">{{ entry.scale.end }}</span>
+            </span>
+          </template>
+          <template v-else>
+            <span
+              class="legend-swatch"
+              :style="{
+                backgroundColor: resolveColor(palette, ramps, entry.color),
+              }"
+              aria-hidden="true"
+            ></span>
+            <span class="legend-label">{{ entry.label }}</span>
+          </template>
           <span class="legend-count" :title="`Colours ${entry.count}`">
             {{ entry.count }}
           </span>
@@ -122,6 +152,17 @@ const groups = computed(() =>
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 50%;
+}
+.legend-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+}
+.scale-bar {
+  width: 3rem;
+  height: 0.5rem;
+  border-radius: 0.2rem;
 }
 .legend-label {
   word-break: break-word;

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { toRaw } from "vue";
 import { useQueryStore } from "./queryStore";
 import type { AddQueryParams, Query, QueryStep, TAB } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
@@ -875,6 +876,12 @@ describe("queryStore", () => {
         elements: { 7: 1 },
         rules: [{ kind: "palette", id: "p", key: "role" }],
       });
+      // Rules read back from the store are stored as plain objects again.
+      store.setColorRules("q1", [
+        ...colors()!.rules,
+        { kind: "gradient", id: "g", key: "price" },
+      ]);
+      expect(() => structuredClone(toRaw(colors()))).not.toThrow();
       store.setRowColor("q1", "r1", undefined);
       store.setElementColor("q1", 7, undefined);
       expect(colors()?.rows).toEqual({});

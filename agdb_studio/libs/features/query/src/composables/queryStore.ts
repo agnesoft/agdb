@@ -335,7 +335,9 @@ const setElementColor = (
 
 const setColorRules = (queryId: string, rules: ColorRule[]) => {
   const colors = colorsOf(queryId);
-  if (colors) colors.rules = rules;
+  // Plain copies: rules read from the store are reactive proxies, which
+  // would end up inside the stored array and break copying it.
+  if (colors) colors.rules = rules.map((rule) => ({ ...toRaw(rule) }));
 };
 
 /**

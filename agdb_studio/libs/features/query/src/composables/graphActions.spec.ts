@@ -12,6 +12,11 @@ import {
 } from "vue";
 import { mount } from "@vue/test-utils";
 import type { GraphElement, GraphLink, GraphNode } from "./types";
+import type { ColorRef } from "../utils/graphColorRules";
+
+/** The palette slot of a colour, if it is one. */
+const slotOf = (color: ColorRef | undefined) =>
+  color && "slot" in color ? color.slot : undefined;
 
 const { exec, execMut, openModal, addNotification, elementValues } = vi.hoisted(
   () => ({
@@ -166,6 +171,7 @@ describe("graphActions", () => {
       "pin",
       "expand",
       "add-edge",
+      "color-distance",
       "delete",
     ]);
     expect(actions.getActions(graphLink(-3)).map((a) => a.key)).toEqual([
@@ -177,6 +183,90 @@ describe("graphActions", () => {
   });
 
   describe("colouring", () => {
+    it("colours by distance from a node or the search start, one distance rule at a time", async () => {
+      const query = setupQuery();
+      const actions = createActions(ref("q1"));
+      await nextTick();
+      // The last run selected ids, it searched from nowhere.
+      expect(actions.searchStartId.value).toBeUndefined();
+      expect(actions.labelOfId(1)).toBe("node 1");
+      expect(actions.labelOfId(9)).toBe("element 9");
+
+      actions.setColorRules([{ kind: "palette", id: "p", key: "role" }]);
+      const menuAction = actions
+        .getActions(graphNode(2))
+        .find((a) => a.key === "color-distance")!;
+      menuAction.action?.({ event: new Event("click"), params: undefined });
+      expect(actions.colorRules.value).toEqual([
+        // The first scale no other gradient uses.
+        { kind: "distance", id: expect.any(String), from: 2, scale: "teal" },
+        { kind: "palette", id: "p", key: "role" },
+      ]);
+      // One hop away, the farthest shown: the faint end.
+      expect(actions.colorOf(actions.elementsById.value.get(1)!)).toEqual({
+        ramp: 0,
+        scale: "teal",
+      });
+
+      query.value.executedQueries = {
+        exec: [QueryBuilder.search().from(1).query()],
+      };
+      expect(actions.searchStartId.value).toBe(1);
+      // A scale picked for the distance is kept when its start changes.
+      actions.setColorRules([
+        { kind: "gradient", id: "g", key: "age" },
+        { kind: "distance", id: "d", from: 2, scale: "rose" },
+        { kind: "palette", id: "p", key: "role" },
+      ]);
+      actions.colorByDistance("start");
+      expect(actions.colorRules.value).toEqual([
+        {
+          kind: "distance",
+          id: expect.any(String),
+          from: "start",
+          scale: "rose",
+        },
+        { kind: "gradient", id: "g", key: "age" },
+        { kind: "palette", id: "p", key: "role" },
+      ]);
+      // A new one gets a scale apart from the gradient's.
+      actions.setColorRules([{ kind: "gradient", id: "g", key: "age" }]);
+      actions.colorByDistance("start");
+      expect(actions.colorRules.value[0]).toMatchObject({ scale: "purple" });
+      actions.setColorRules([
+        { kind: "distance", id: "d", from: "start" },
+        { kind: "palette", id: "p", key: "role" },
+      ]);
+      expect(actions.colorOf(actions.elementsById.value.get(1)!)).toEqual({
+        ramp: 1,
+        scale: "teal",
+      });
+      // A start that is not shown is no start.
+      query.value.executedQueries = {
+        exec: [QueryBuilder.search().from(42).query()],
+      };
+      expect(actions.searchStartId.value).toBeUndefined();
+      // Nor is an edge: distances are from nodes.
+      query.value.executedQueries = {
+        exec: [QueryBuilder.search().from(-3).query()],
+      };
+      expect(actions.searchStartId.value).toBeUndefined();
+
+      // A search from an alias starts at the shown node with it.
+      elementValues.describe.mockImplementation((element) =>
+        element.id === 2 ? { ...element, alias: "root" } : element,
+      );
+      query.value.executedQueries = {
+        exec: [QueryBuilder.search().from("root").query()],
+      };
+      expect(actions.searchStartId.value).toBe(2);
+      query.value.executedQueries = {
+        exec: [QueryBuilder.search().from("gone").query()],
+      };
+      expect(actions.searchStartId.value).toBeUndefined();
+      elementValues.describe.mockImplementation((element) => element);
+    });
+
     const withValues = (element: GraphElement): GraphElement =>
       element.id === 1
         ? { ...element, values: [{ key: "role", value: "admin" }] }
@@ -189,9 +279,9 @@ describe("graphActions", () => {
       await nextTick();
       const node1 = actions.elementsById.value.get(1) as GraphElement;
       const node2 = actions.elementsById.value.get(2) as GraphElement;
-      expect(actions.colorSlotOf(node1)).toBeUndefined();
+      expect(slotOf(actions.colorOf(node1))).toBeUndefined();
       expect(actions.valueIndex.value).toEqual([
-        { key: "role", values: [{ value: "admin", count: 1 }] },
+        { key: "role", numeric: false, values: [{ value: "admin", count: 1 }] },
       ]);
       expect(actions.colorQueries.value).toEqual([
         { rowId: "r", index: 0, label: "select", slot: undefined },
@@ -200,17 +290,17 @@ describe("graphActions", () => {
       actions.setRowColor("r", 3);
       expect(actions.rowColors.value).toEqual({ r: 3 });
       expect(actions.colorQueries.value[0]?.slot).toBe(3);
-      expect(actions.colorSlotOf(node2)).toBe(3);
+      expect(slotOf(actions.colorOf(node2))).toBe(3);
       expect(actions.colorLegend.value).toEqual([
-        { label: "query 0", slot: 3, source: "query", count: 3 },
+        { label: "query 0", color: { slot: 3 }, source: "query", count: 3 },
       ]);
 
       actions.setColorRules([{ kind: "palette", id: "p", key: "role" }]);
       expect(actions.colorRules.value).toHaveLength(1);
-      expect(actions.colorSlotOf(node1)).toBe(0);
+      expect(slotOf(actions.colorOf(node1))).toBe(0);
 
       actions.setElementColor(node1, 4);
-      expect(actions.colorSlotOf(node1)).toBe(4);
+      expect(slotOf(actions.colorOf(node1))).toBe(4);
       actions.setElementColorById(99, 2);
       expect(actions.colorElements.value).toEqual([
         { id: 1, slot: 4, element: node1, label: "node 1" },
@@ -218,7 +308,7 @@ describe("graphActions", () => {
       ]);
       expect(actions.colorLegend.value[0]).toEqual({
         label: "node 1",
-        slot: 4,
+        color: { slot: 4 },
         source: "element",
         count: 1,
       });
@@ -236,12 +326,12 @@ describe("graphActions", () => {
         ...query.value.rows.exec,
       ];
       expect(actions.colorQueries.value.map((q) => q.rowId)).toEqual(["r"]);
-      expect(actions.colorSlotOf(node2)).toBe(3);
+      expect(slotOf(actions.colorOf(node2))).toBe(3);
       query.value.rows.exec = [];
       expect(actions.colorQueries.value[0]?.label).toBe("(removed)");
 
       actions.clearColors();
-      expect(actions.colorSlotOf(node1)).toBeUndefined();
+      expect(slotOf(actions.colorOf(node1))).toBeUndefined();
       elementValues.describe.mockImplementation((element) => element);
     });
 
@@ -270,9 +360,10 @@ describe("graphActions", () => {
       const actions = createActions(ref("q1"));
       await nextTick();
       expect(actions.valueIndex.value).toEqual([
-        { key: "age", values: [{ value: "1", count: 3 }] },
+        { key: "age", numeric: true, values: [{ value: "1", count: 3 }] },
         {
           key: "kind",
+          numeric: false,
           values: [
             { value: "a", count: 2 },
             { value: "b", count: 1 },

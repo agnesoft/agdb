@@ -2,9 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
 });
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref } from "vue";
-import type { DbKeyValue, QueryResult, QueryType } from "@agnesoft/agdb_api";
+import {
+  QueryBuilder,
+  type DbKeyValue,
+  type QueryResult,
+  type QueryType,
+} from "@agnesoft/agdb_api";
 
 const { exec, execMut, captured } = vi.hoisted(() => ({
   exec: vi.fn(),
@@ -29,6 +34,7 @@ vi.mock("../graph/QueryGraph.vue", async () => {
 });
 
 import QueryResults from "./QueryResults.vue";
+import ColorsPanel from "../graph/ColorsPanel.vue";
 import { useQueryStore } from "../../composables/queryStore";
 import type { GraphActions } from "../../composables/graphActions";
 import type { GraphNode, QueryStep } from "../../composables/types";
@@ -79,6 +85,8 @@ const mountResults = (props: { keepView?: boolean; compact?: boolean } = {}) =>
   });
 
 const actions = () => captured.actions as GraphActions;
+/** The colours panel, teleported out of the results. */
+const panel = (wrapper: VueWrapper) => wrapper.findComponent(ColorsPanel);
 
 describe("QueryResults", () => {
   beforeEach(() => {
@@ -422,6 +430,14 @@ describe("QueryResults", () => {
     expect(actions().pendingEdgeSourceId.value).toBeUndefined();
     // Escape outside add-edge mode is a no-op.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+    // With the colours panel open, Escape only closes the panel.
+    actions().startAddEdge(node);
+    await wrapper.get("[data-testid=colors-toggle]").trigger("click");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await nextTick();
+    expect(panel(wrapper).exists()).toBe(false);
+    expect(actions().pendingEdgeSourceId.value).toBe(1);
     wrapper.unmount();
   });
 
@@ -494,7 +510,7 @@ describe("QueryResults", () => {
 
     await toggle.trigger("click");
     // Colour the query of the run.
-    const queryLine = wrapper.get("[data-testid=colors-query]");
+    const queryLine = panel(wrapper).get("[data-testid=colors-query]");
     expect(queryLine.text()).toContain("select");
     await queryLine.findAll("[data-testid=swatch]")[1]?.trigger("click");
     expect(store.getQuery("q1")?.value.colors?.rows.r).toBe(1);
@@ -506,10 +522,10 @@ describe("QueryResults", () => {
     onlyGraph();
 
     // The legend opens the panel again once closed.
-    await wrapper.get("[aria-label='Close colours']").trigger("click");
-    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(false);
+    await panel(wrapper).get("[aria-label='Close colours']").trigger("click");
+    expect(panel(wrapper).exists()).toBe(false);
     await wrapper.get("[data-testid=color-legend-edit]").trigger("click");
-    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(true);
+    expect(panel(wrapper).exists()).toBe(true);
 
     // Manual colour from the context menu.
     const node = actions().elementsById.value.get(1) as GraphNode;
@@ -524,7 +540,7 @@ describe("QueryResults", () => {
     expect(store.getQuery("q1")?.value.colors?.elements[1]).toBe(2);
     expect(actions().menu.value).toBeUndefined();
     // The panel lists it and can clear it.
-    const element = wrapper.get("[data-testid=colors-element]");
+    const element = panel(wrapper).get("[data-testid=colors-element]");
     expect(element.text()).toContain("node 1");
     await element.get("[data-testid=swatch-none]").trigger("click");
     expect(store.getQuery("q1")?.value.colors?.elements[1]).toBeUndefined();
@@ -538,11 +554,58 @@ describe("QueryResults", () => {
     ).toBe("true");
     actions().closeMenu();
 
-    await wrapper.get("[data-testid=color-clear-all]").trigger("click");
+    await panel(wrapper).get("[data-testid=color-clear-all]").trigger("click");
     expect(store.getQuery("q1")?.value.colors).toBeUndefined();
     expect(wrapper.find("[data-testid=color-legend]").exists()).toBe(false);
-    await wrapper.get("[aria-label='Close colours']").trigger("click");
-    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(false);
+    await panel(wrapper).get("[aria-label='Close colours']").trigger("click");
+    expect(panel(wrapper).exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it("colours by distance from the search start and shows gradients on the toggle", async () => {
+    const wrapper = mountResults();
+    const elements = [
+      {
+        id: 1,
+        from: 0,
+        to: 0,
+        values: [{ key: { String: "n" }, value: { I64: 1 } }],
+      },
+      {
+        id: 2,
+        from: 0,
+        to: 0,
+        values: [{ key: { String: "n" }, value: { I64: 3 } }],
+      },
+      { id: -3, from: 1, to: 2, values: [] },
+    ];
+    await run([{ result: 3, elements }], ["search"]);
+    store.getQuery("q1")!.value.executedQueries = {
+      exec: [QueryBuilder.search().from(1).query()],
+    };
+    await nextTick();
+    await wrapper.get("[data-testid=colors-toggle]").trigger("click");
+    await panel(wrapper)
+      .get("[data-testid=colors-distance-start]")
+      .trigger("click");
+    expect(store.getQuery("q1")?.value.colors?.rules).toEqual([
+      {
+        kind: "distance",
+        id: expect.any(String),
+        from: "start",
+        scale: "teal",
+      },
+    ]);
+    expect(
+      wrapper
+        .get("[data-testid=color-legend] [data-testid=color-legend-scale]")
+        .text(),
+    ).toMatch(/0\s*1/);
+
+    store.setColorRules("q1", [{ kind: "gradient", id: "g", key: "n" }]);
+    await nextTick();
+    const dots = wrapper.findAll(".used-colors span");
+    expect(dots).toHaveLength(1);
+    expect(dots[0]!.attributes("style")).toContain("linear-gradient");
     wrapper.unmount();
   });
   it("gives each query of the run its own colour", async () => {
@@ -563,8 +626,79 @@ describe("QueryResults", () => {
     );
     await nextTick();
     await wrapper.get("[data-testid=colors-toggle]").trigger("click");
-    await wrapper.get("[data-testid=colors-each-query]").trigger("click");
+    await panel(wrapper)
+      .get("[data-testid=colors-each-query]")
+      .trigger("click");
     expect(query.value.colors?.rows).toEqual({ a: 0, b: 1 });
+    wrapper.unmount();
+  });
+  it("closes the colours panel on a click outside or Escape, not on its toggle", async () => {
+    const wrapper = mountResults();
+    await run([{ result: 1, elements: [el(1)] }]);
+    const toggle = wrapper.get("[data-testid=colors-toggle]");
+    await toggle.trigger("click");
+    // Out of the results, so a small widget doesn't clip it.
+    const popover = panel(wrapper).element.parentElement!;
+    expect(popover.parentElement).toBe(document.body);
+    expect(popover.getAttribute("style")).toContain("max-height");
+
+    // Inside the panel it stays open.
+    panel(wrapper).element.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    await nextTick();
+    expect(panel(wrapper).exists()).toBe(true);
+    // The toggle closes it, without the outside click reopening it.
+    toggle.element.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    await toggle.trigger("click");
+    expect(panel(wrapper).exists()).toBe(false);
+
+    await toggle.trigger("click");
+    // A click right after another one is dropped as the same click.
+    await new Promise((resolve) => setTimeout(resolve));
+    document.body.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextTick();
+    expect(panel(wrapper).exists()).toBe(false);
+
+    // The graph's context menu, also teleported, keeps it open.
+    await toggle.trigger("click");
+    await new Promise((resolve) => setTimeout(resolve));
+    const menu = document.createElement("div");
+    menu.className = "graph-context-menu";
+    document.body.append(menu);
+    menu.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    menu.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextTick();
+    expect(panel(wrapper).exists()).toBe(true);
+    menu.remove();
+
+    // Focus moves into it, and back to the toggle on Escape.
+    const popoverEl = panel(wrapper).element.parentElement!;
+    expect(document.activeElement).toBe(popoverEl);
+    expect(toggle.attributes("aria-controls")).toBe(popoverEl.id);
+    // With the context menu open over it, Escape closes the menu only.
+    actions().openMenu(actions().elementsById.value.get(1)!, 0, 0);
+    await nextTick();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await nextTick();
+    expect(actions().menu.value).toBeUndefined();
+    expect(panel(wrapper).exists()).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await nextTick();
+    expect(panel(wrapper).exists()).toBe(false);
+    expect(document.activeElement).toBe(toggle.element);
+
+    // Its close button gives the focus back too.
+    await toggle.trigger("click");
+    (document.activeElement as HTMLElement).blur();
+    await panel(wrapper).get("[aria-label='Close colours']").trigger("click");
+    expect(panel(wrapper).exists()).toBe(false);
+    expect(document.activeElement).toBe(toggle.element);
     wrapper.unmount();
   });
   it("charts the results, starting from a suggested chart kept in the store", async () => {

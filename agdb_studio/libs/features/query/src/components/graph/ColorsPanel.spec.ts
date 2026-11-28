@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
 import ColorsPanel from "./ColorsPanel.vue";
+import { GRAPH_THEME_FALLBACK } from "../../utils/graphStyle";
+
+const ramps = { ...GRAPH_THEME_FALLBACK.ramps, teal: ["#000000", "#ffffff"] };
 
 const palette = ["#111111", "#222222", "#333333"];
 
@@ -9,6 +12,7 @@ const mountPanel = (props: Record<string, unknown> = {}) =>
     attachTo: document.body,
     props: {
       palette,
+      ramps,
       queries: [
         { rowId: "r1", index: 0, label: "search.elements", slot: 1 },
         { rowId: "r2", index: 1, label: "select.ids" },
@@ -88,6 +92,17 @@ describe("ColorsPanel", () => {
     await wrapper.get("[aria-label='Close colours']").trigger("click");
     await wrapper.trigger("keydown", { key: "Escape" });
     expect(wrapper.emitted("close")).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it("colours by distance from the search start, when there is one", async () => {
+    const wrapper = mountPanel();
+    expect(wrapper.find("[data-testid=colors-distance-start]").exists()).toBe(
+      false,
+    );
+    await wrapper.setProps({ hasSearchStart: true });
+    await wrapper.get("[data-testid=colors-distance-start]").trigger("click");
+    expect(wrapper.emitted("distance-start")).toHaveLength(1);
     wrapper.unmount();
   });
 });

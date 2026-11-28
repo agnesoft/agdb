@@ -1,6 +1,15 @@
 import type { GraphElement, GraphLink, GraphNode } from "../composables/types";
 import { toDisplayValues } from "./graphDataUtils";
 
+/** The gradient scales a gradient or distance rule can use. */
+export const RAMP_NAMES = ["teal", "purple", "rose", "multi"] as const;
+export type RampName = (typeof RAMP_NAMES)[number];
+/** The scale of rules saved before they could pick one. */
+export const DEFAULT_RAMP: RampName = "teal";
+
+export const isRampName = (value: unknown): value is RampName =>
+  RAMP_NAMES.some((name) => name === value);
+
 /** Colors used by the graph, resolved from CSS custom properties. */
 export type GraphTheme = {
   background: string;
@@ -15,6 +24,8 @@ export type GraphTheme = {
   uncolored: string;
   /** Categorical colours for colour rules, in fixed order. */
   palette: string[];
+  /** Scales for gradients, each from low to high. */
+  ramps: Record<RampName, string[]>;
 };
 
 export const GRAPH_THEME_FALLBACK: GraphTheme = {
@@ -27,7 +38,53 @@ export const GRAPH_THEME_FALLBACK: GraphTheme = {
   hover: "#ffa02c",
   selected: "#007bff",
   uncolored: "#b5b5b5",
-  palette: ["#17890b", "#2dbad8", "#eda100", "#9752fe", "#f92240"],
+  palette: [
+    "#17890b",
+    "#2dbad8",
+    "#eda100",
+    "#9752fe",
+    "#f92240",
+    "#7d376e",
+    "#3f38c6",
+  ],
+  ramps: {
+    teal: [
+      "#04c5b5",
+      "#0cab9d",
+      "#039286",
+      "#087970",
+      "#03625a",
+      "#044b45",
+      "#013631",
+    ],
+    purple: [
+      "#bb91ff",
+      "#a47ae7",
+      "#8e63ce",
+      "#794db6",
+      "#64379e",
+      "#501f86",
+      "#3d006f",
+    ],
+    rose: [
+      "#fb78b0",
+      "#e2629a",
+      "#ca4b85",
+      "#b23471",
+      "#9a1a5d",
+      "#7f0049",
+      "#600136",
+    ],
+    multi: [
+      "#acb900",
+      "#4caf47",
+      "#089474",
+      "#087679",
+      "#025a73",
+      "#013d73",
+      "#230177",
+    ],
+  },
 };
 
 const THEME_VARS = [
@@ -57,6 +114,18 @@ export const readGraphTheme = (el: Element): GraphTheme => {
     (fallback, i) =>
       style.getPropertyValue(`--graph-palette-${i + 1}`).trim() || fallback,
   );
+  const ramp = (name: RampName) =>
+    GRAPH_THEME_FALLBACK.ramps[name].map(
+      (fallback, i) =>
+        style.getPropertyValue(`--graph-ramp-${name}-${i + 1}`).trim() ||
+        fallback,
+    );
+  theme.ramps = {
+    teal: ramp("teal"),
+    purple: ramp("purple"),
+    rose: ramp("rose"),
+    multi: ramp("multi"),
+  };
   return theme;
 };
 
@@ -115,8 +184,8 @@ export const computeHighlight = (
 const hasHover = (state: HighlightState): boolean =>
   state.hoveredNodeId !== undefined || state.hoveredLinkId !== undefined;
 
-/** Applies an alpha channel to a hex or rgb() color. Other formats are returned unchanged. */
-export const withAlpha = (color: string, alpha: number): string => {
+/** The red, green and blue of a hex or rgb() color, if it is one. */
+const parseRgb = (color: string): [number, number, number] | undefined => {
   const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
   if (hex?.[1]) {
     const digits =
@@ -126,16 +195,45 @@ export const withAlpha = (color: string, alpha: number): string => {
             .map((d) => d + d)
             .join("")
         : hex[1];
-    const r = parseInt(digits.slice(0, 2), 16);
-    const g = parseInt(digits.slice(2, 4), 16);
-    const b = parseInt(digits.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    const at = (i: number) => parseInt(digits.slice(i, i + 2), 16);
+    return [at(0), at(2), at(4)];
   }
   const rgb = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(color.trim());
-  if (rgb) {
-    return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${alpha})`;
-  }
-  return color;
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : undefined;
+};
+
+/** Applies an alpha channel to a hex or rgb() color. Other formats are returned unchanged. */
+export const withAlpha = (color: string, alpha: number): string => {
+  const rgb = parseRgb(color);
+  return rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : color;
+};
+
+/** The gradient scale as a CSS background, low to high along `direction`. */
+export const rampGradient = (
+  ramp: readonly string[],
+  direction = "to right",
+): string => `linear-gradient(${direction}, ${ramp.join(", ")})`;
+
+/**
+ * The colour at `t` (0 low, 1 high) along a scale, blended between its two
+ * nearest steps. Steps that are not hex or rgb() are not blended.
+ */
+export const rampColor = (ramp: readonly string[], t: number): string => {
+  const position = Math.min(1, Math.max(0, t)) * (ramp.length - 1);
+  const index = Math.floor(position);
+  const low = ramp[index] ?? "";
+  const high = ramp[index + 1];
+  const a = parseRgb(low);
+  const b = high === undefined ? undefined : parseRgb(high);
+  if (!a || !b) return low;
+  const mix = position - index;
+  return `#${a
+    .map((v, i) =>
+      Math.round(v + (b[i]! - v) * mix)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
 };
 
 const DIM_ALPHA = 0.25;

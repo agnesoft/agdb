@@ -5,6 +5,7 @@ import type {
   PaletteSlot,
 } from "@agdb-studio/query/src/utils/graphColorRules";
 import { readChartConfig } from "@agdb-studio/query/src/utils/chartConfig";
+import { isRampName } from "@agdb-studio/query/src/utils/graphStyle";
 import {
   DEFAULT_WIDGET_SIZE,
   RESULT_VIEWS,
@@ -81,15 +82,23 @@ const readRows = (value: unknown): WidgetRow[] =>
     : [];
 
 const readRule = (value: unknown): ColorRule[] => {
-  if (
-    !isRecord(value) ||
-    typeof value.id !== "string" ||
-    typeof value.key !== "string"
-  ) {
-    return [];
+  if (!isRecord(value) || typeof value.id !== "string") return [];
+  const { id } = value;
+  // A gradient's scale, if it is a known one; teal otherwise.
+  const scale = isRampName(value.scale) ? { scale: value.scale } : {};
+  if (value.kind === "distance") {
+    const { from } = value;
+    return from === "start" ||
+      (typeof from === "number" && Number.isInteger(from) && from > 0)
+      ? [{ kind: "distance", id, from, ...scale }]
+      : [];
   }
-  const { id, key } = value;
+  if (typeof value.key !== "string") return [];
+  const { key } = value;
   if (value.kind === "palette") return [{ kind: "palette", id, key }];
+  if (value.kind === "gradient") {
+    return [{ kind: "gradient", id, key, ...scale }];
+  }
   if (value.kind !== "property" || !isSlot(value.color)) return [];
   return [
     {

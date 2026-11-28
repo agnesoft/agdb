@@ -1,4 +1,3 @@
-import { toRaw } from "vue";
 import type {
   PinnedDetail,
   Query,
@@ -10,6 +9,7 @@ import {
   urlValueToSteps,
 } from "@agdb-studio/query/src/utils/queryUrl";
 import {
+  copyColorConfig,
   hasColoring,
   type ColorConfig,
 } from "@agdb-studio/query/src/utils/graphColorRules";
@@ -70,7 +70,7 @@ export const seedDisplay = (queryId: string, widget: Widget): void => {
   /* v8 ignore next -- @preserve: seeded together with the rows first */
   if (!query) return;
   query.value.colors = widget.colors
-    ? structuredClone(toRaw(widget.colors))
+    ? copyColorConfig(widget.colors)
     : undefined;
   queryStore.setView(queryId, widget.view);
   queryStore.setPins(queryId, widget.pins ? copyPins(widget.pins) : []);
@@ -88,7 +88,7 @@ export const withDisplay = (widget: Widget, query: Query): Widget => {
   if (query.chart) result.chart = copyChartConfig(query.chart);
   if (query.pins?.length) result.pins = copyPins(query.pins);
   if (query.colors && hasColoring(query.colors)) {
-    result.colors = structuredClone(toRaw(query.colors));
+    result.colors = copyColorConfig(query.colors);
   }
   return result;
 };

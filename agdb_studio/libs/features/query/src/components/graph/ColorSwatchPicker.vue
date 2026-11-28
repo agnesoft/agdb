@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { onBeforeUnmount, ref, watch } from "vue";
+import { ref } from "vue";
+import { usePickerPopover } from "../../composables/pickerPopover";
 import { LuPalette } from "@kalimahapps/vue-icons";
 import type { PaletteSlot } from "../../utils/graphColorRules";
 
@@ -23,30 +24,17 @@ const emit = defineEmits<{
   "update:modelValue": [slot: PaletteSlot | undefined];
 }>();
 
-const open = ref(false);
 const root = ref<HTMLElement>();
+const { open, onEscape } = usePickerPopover(root);
 
 const pick = (slot: PaletteSlot | undefined) => {
   emit("update:modelValue", slot);
   open.value = false;
 };
-
-const onPointerDown = (event: PointerEvent) => {
-  if (event.target instanceof Node && !root.value?.contains(event.target)) {
-    open.value = false;
-  }
-};
-watch(open, (isOpen) => {
-  if (isOpen) document.addEventListener("pointerdown", onPointerDown, true);
-  else document.removeEventListener("pointerdown", onPointerDown, true);
-});
-onBeforeUnmount(() =>
-  document.removeEventListener("pointerdown", onPointerDown, true),
-);
 </script>
 
 <template>
-  <span ref="root" class="color-swatch-picker" @keydown.esc.stop="open = false">
+  <span ref="root" class="color-swatch-picker" @keydown.esc="onEscape">
     <button
       v-if="!inline"
       type="button"

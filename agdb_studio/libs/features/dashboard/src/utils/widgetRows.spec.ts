@@ -193,4 +193,30 @@ describe("widgetRows", () => {
     expect(displayDiffers(plain, entry.value)).toBe(true);
     expect(withDisplay(plain, entry.value)).toMatchObject({ view: "table" });
   });
+
+  it("copies colours whose rules are reactive, as the colours editor gives them", () => {
+    queryStore.addQuery({ id: "c" });
+    const query = queryStore.getQuery("c")!;
+    query.value.colors = {
+      ...emptyColorConfig(),
+      rules: [{ kind: "palette", id: "p", key: "role" }],
+    };
+    // A new array holding the rules read from the store, i.e. proxies.
+    query.value.colors.rules = [
+      ...query.value.colors.rules,
+      { kind: "gradient", id: "g", key: "price", scale: "rose" },
+    ];
+    const colors = withDisplay(
+      createWidget({ owner: "o", db: "d" }),
+      query.value,
+    ).colors!;
+    expect(colors.rules).toEqual([
+      { kind: "palette", id: "p", key: "role" },
+      { kind: "gradient", id: "g", key: "price", scale: "rose" },
+    ]);
+    // Saved as JSON and copied again without sharing anything.
+    expect(() => structuredClone(colors)).not.toThrow();
+    colors.rules.pop();
+    expect(query.value.colors.rules).toHaveLength(2);
+  });
 });

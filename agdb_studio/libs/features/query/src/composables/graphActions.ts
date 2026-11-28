@@ -34,9 +34,14 @@ import {
 } from "../utils/graphActionQueries";
 import {
   buildColorResolver,
+  numericValue,
+  ruleScale,
+  unusedScale,
+  type ColorRef,
   type ColorRule,
   type PaletteSlot,
 } from "../utils/graphColorRules";
+import { searchStart } from "../utils/graphDistance";
 import { GRAPH_THEME_FALLBACK } from "../utils/graphStyle";
 
 export type PanelMode = "view" | "edit";
@@ -228,6 +233,30 @@ export const createGraphActions = (
   /** Number of colours in the palette; set by the graph from the theme. */
   const paletteSize = ref(GRAPH_THEME_FALLBACK.palette.length);
 
+  /** A shown element by id, as labelled in menus and colours. */
+  const labelOfId = (id: number): string => {
+    const element = elementsById.value.get(id);
+    return element
+      ? elementLabel(elementValues.describe(element))
+      : `element ${id}`;
+  };
+
+  /** The node the first search of the last run started from, if shown. */
+  const searchStartId = computed(() => {
+    const tab = query.value?.lastExecutedTab;
+    const queries = tab ? (query.value?.executedQueries?.[tab] ?? []) : [];
+    const id = searchStart(queries, (alias) => {
+      for (const element of elementsById.value.values()) {
+        if (isNode(element) && elementValues.describe(element).alias === alias)
+          return element.id;
+      }
+      return undefined;
+    });
+    // A search can start from an edge, but distances are from nodes.
+    const element = id === undefined ? undefined : elementsById.value.get(id);
+    return element && isNode(element) ? id : undefined;
+  });
+
   const colorResolver = computed(() =>
     buildColorResolver(
       query.value?.colors,
@@ -237,19 +266,15 @@ export const createGraphActions = (
       {
         // Only rows of the last run colour something, so are in the legend.
         row: (rowId) => `query ${rowIdsByResult.value.indexOf(rowId)}`,
-        element: (id) => {
-          const element = elementsById.value.get(id);
-          return element
-            ? elementLabel(elementValues.describe(element))
-            : `element ${id}`;
-        },
+        element: labelOfId,
+        startId: searchStartId.value,
       },
     ),
   );
 
-  /** The palette slot of an element, using all its stored values. */
-  const colorSlotOf = (element: GraphElement): PaletteSlot | undefined =>
-    colorResolver.value.slotOf(elementValues.describe(element));
+  /** The colour of an element, using all its stored values. */
+  const colorOf = (element: GraphElement): ColorRef | undefined =>
+    colorResolver.value.colorOf(elementValues.describe(element));
   const colorLegend = computed(() => colorResolver.value.legend);
   const colorRules = computed(() => query.value?.colors?.rules ?? []);
   const rowColors = computed(() => query.value?.colors?.rows ?? {});
@@ -268,6 +293,24 @@ export const createGraphActions = (
     if (queryId?.value) queryStore.clearColors(queryId.value);
   };
   /**
+   * Colours nodes by their distance from `from` (a node id, or the search
+   * start), first among the rules. It replaces an earlier distance rule, so
+   * one distance colouring is shown at a time, and keeps its scale.
+   */
+  const colorByDistance = (from: number | "start") => {
+    const previous = colorRules.value.find((rule) => rule.kind === "distance");
+    const others = colorRules.value.filter((rule) => rule.kind !== "distance");
+    setColorRules([
+      {
+        kind: "distance",
+        id: crypto.randomUUID(),
+        from,
+        scale: previous ? ruleScale(previous) : unusedScale(others),
+      },
+      ...others,
+    ]);
+  };
+  /**
    * The keys of the shown elements with their values and how many elements
    * have each, offered for colour rules. Values are sorted by count.
    */
@@ -284,6 +327,10 @@ export const createGraphActions = (
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, counts]) => ({
         key,
+        /** Every value reads as a number, so the key can be a gradient. */
+        numeric: [...counts.keys()].every(
+          (value) => numericValue(value) !== undefined,
+        ),
         values: [...counts.entries()]
           .map(([value, count]) => ({ value, count }))
           .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
@@ -630,6 +677,11 @@ export const createGraphActions = (
           label: "Add edge from here",
           action: run(() => startAddEdge(element)),
         },
+        {
+          key: "color-distance",
+          label: "Colour by distance from here",
+          action: run(() => colorByDistance(element.id)),
+        },
       );
     }
     actions.push({
@@ -660,8 +712,11 @@ export const createGraphActions = (
     togglePin,
     paletteSize,
     colorResolver,
-    colorSlotOf,
+    colorOf,
     colorLegend,
+    labelOfId,
+    searchStartId,
+    colorByDistance,
     colorRules,
     rowColors,
     valueIndex,

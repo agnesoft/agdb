@@ -17,6 +17,9 @@ import {
   linkEndpointId,
   linkTooltip,
   nodeTooltip,
+  rampColor,
+  rampGradient,
+  isRampName,
   readGraphTheme,
   withAlpha,
 } from "./graphStyle";
@@ -68,6 +71,53 @@ describe("graphStyle", () => {
       expect(palette[0]).toBe(GRAPH_THEME_FALLBACK.palette[0]);
       expect(palette).toHaveLength(GRAPH_THEME_FALLBACK.palette.length);
       el.remove();
+    });
+
+    it("reads the gradient scales, step by step", () => {
+      const el = document.createElement("div");
+      el.style.setProperty("--graph-ramp-purple-7", "#010203");
+      document.body.appendChild(el);
+      const { ramps } = readGraphTheme(el);
+      expect(ramps.purple.at(-1)).toBe("#010203");
+      expect(ramps.purple[0]).toBe(GRAPH_THEME_FALLBACK.ramps.purple[0]);
+      expect(ramps.teal).toEqual(GRAPH_THEME_FALLBACK.ramps.teal);
+      el.remove();
+    });
+  });
+
+  describe("isRampName", () => {
+    it("knows the scales by name", () => {
+      expect(isRampName("multi")).toBe(true);
+      expect(isRampName("blue")).toBe(false);
+      expect(isRampName(undefined)).toBe(false);
+    });
+  });
+
+  describe("rampGradient", () => {
+    it("lists the steps low to high, to the right unless told", () => {
+      expect(rampGradient(["#000", "#fff"])).toBe(
+        "linear-gradient(to right, #000, #fff)",
+      );
+      expect(rampGradient(["#000"], "to top")).toBe(
+        "linear-gradient(to top, #000)",
+      );
+    });
+  });
+
+  describe("rampColor", () => {
+    const ramp = ["#000000", "#ff0000", "rgb(255, 255, 255)"];
+    it("blends between the two nearest steps, clamped to the ends", () => {
+      expect(rampColor(ramp, 0)).toBe("#000000");
+      expect(rampColor(ramp, 0.25)).toBe("#800000");
+      expect(rampColor(ramp, 0.75)).toBe("#ff8080");
+      expect(rampColor(ramp, 1)).toBe("rgb(255, 255, 255)");
+      expect(rampColor(ramp, 2)).toBe("rgb(255, 255, 255)");
+      expect(rampColor(ramp, -1)).toBe("#000000");
+    });
+    it("does not blend colours it cannot read", () => {
+      expect(rampColor(["red", "#ffffff"], 0.5)).toBe("red");
+      expect(rampColor(["#000", "blue"], 0.5)).toBe("#000");
+      expect(rampColor([], 0.5)).toBe("");
     });
   });
 

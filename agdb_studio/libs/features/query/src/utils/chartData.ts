@@ -261,7 +261,7 @@ export type ChartSeriesData = {
   folded: number;
 };
 
-/** Most series drawn: one per palette colour, the last as "Other" if needed. */
+/** Most series drawn (the last as "Other" if needed); more lines are hard to tell apart. */
 export const MAX_SERIES = 5;
 
 /**

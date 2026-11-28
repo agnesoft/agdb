@@ -6,6 +6,7 @@ import {
   onMounted,
   onUnmounted,
   ref,
+  useId,
   watch,
   type Ref,
 } from "vue";
@@ -18,9 +19,16 @@ import ResultScalar from "./ResultScalar.vue";
 import ResultsChart from "./chart/ResultsChart.vue";
 import ColorsPanel from "../graph/ColorsPanel.vue";
 import { LuPalette } from "@kalimahapps/vue-icons";
+import { onClickOutside } from "@vueuse/core";
+import { useAnchoredPopover } from "../../composables/anchoredPopover";
+import { rampGradient } from "../../utils/graphStyle";
 import ColorLegend from "../graph/ColorLegend.vue";
-import { useGraphPalette } from "../../composables/graphPalette";
-import { hasColoring, type PaletteSlot } from "../../utils/graphColorRules";
+import { useGraphPalette, useGraphRamps } from "../../composables/graphPalette";
+import {
+  hasColoring,
+  resolveColor,
+  type PaletteSlot,
+} from "../../utils/graphColorRules";
 import {
   elementLabel,
   provideGraphActions,
@@ -206,11 +214,38 @@ const openTableMenu = (element: DbElement, x: number, y: number) => {
 };
 
 const palette = useGraphPalette();
+const ramps = useGraphRamps();
 const colorsOpen = ref(false);
+const colorsToggle = ref<HTMLElement>();
+const colorsPanelEl = ref<HTMLElement>();
+/** Out of the results (and a small widget's clipping) into the viewport. */
+const colorsPanelStyle = useAnchoredPopover(colorsToggle, colorsPanelEl);
+const colorsPanelId = useId();
+// Teleported to the end of the page, so focus moves into it when it opens,
+// and back to the toggle when it closes from the keyboard or its button.
+watch(colorsPanelEl, (el) => el?.focus());
+const closeColors = () => {
+  colorsOpen.value = false;
+  colorsToggle.value?.focus();
+};
+// The toggle closes it on its own; ignored so it doesn't reopen right away.
+onClickOutside(colorsPanelEl, () => (colorsOpen.value = false), {
+  // The graph's context menu (also teleported) changes the colours too.
+  ignore: [colorsToggle, ".graph-context-menu"],
+});
 const colored = computed(() => hasColoring(query.value?.colors));
 /** The colours in use, shown on the toolbar button. */
 const usedColors = computed(() => [
-  ...new Set(actions.colorLegend.value.map((entry) => entry.slot)),
+  ...new Set(
+    actions.colorLegend.value.flatMap((entry) => {
+      // A gradient (by value or distance) shows as one dot per scale, not per step.
+      const color =
+        "ramp" in entry.color
+          ? rampGradient(ramps.value[entry.color.scale], "to bottom")
+          : resolveColor(palette.value, ramps.value, entry.color);
+      return color ? [color] : [];
+    }),
+  ),
 ]);
 const menuColor = computed(() => {
   const element = actions.menu.value?.element;
@@ -235,13 +270,17 @@ const saveValues = async (values: DbKeyValue[], original: DbKeyValue[]) => {
   }
 };
 
+/**
+ * Escape closes the top layer only: the context menu (which closes itself),
+ * then the colours panel, then adding an edge.
+ */
 const onKeydown = (event: KeyboardEvent) => {
-  if (
-    event.key === "Escape" &&
-    actions.pendingEdgeSourceId.value !== undefined
-  ) {
-    actions.cancelAddEdge();
+  if (event.key !== "Escape" || actions.menu.value) return;
+  if (colorsOpen.value) {
+    closeColors();
+    return;
   }
+  if (actions.pendingEdgeSourceId.value !== undefined) actions.cancelAddEdge();
 };
 
 onMounted(() => document.addEventListener("keydown", onKeydown));
@@ -282,10 +321,12 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       <div class="toolbar-actions">
         <div v-if="view !== 'chart'" class="colors-control">
           <button
+            ref="colorsToggle"
             type="button"
             class="button colors-button"
             :class="{ colored }"
             :aria-expanded="colorsOpen"
+            :aria-controls="colorsPanelId"
             data-testid="colors-toggle"
             title="Colour nodes and edges by query, by property or one by one"
             @click="colorsOpen = !colorsOpen"
@@ -298,27 +339,41 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
               aria-hidden="true"
             >
               <span
-                v-for="slot in usedColors"
-                :key="slot"
-                :style="{ backgroundColor: palette[slot] }"
+                v-for="color in usedColors"
+                :key="color"
+                :style="{ background: color }"
               ></span>
             </span>
           </button>
-          <ColorsPanel
-            v-if="colorsOpen"
-            class="colors-popover"
-            :palette="palette"
-            :queries="actions.colorQueries.value"
-            :rules="actions.colorRules.value"
-            :keys="actions.valueIndex.value"
-            :elements="actions.colorElements.value"
-            @row-color="actions.setRowColor"
-            @each-query="actions.colorEachQuery()"
-            @update:rules="actions.setColorRules"
-            @element-color="actions.setElementColorById"
-            @clear-all="actions.clearColors()"
-            @close="colorsOpen = false"
-          />
+          <Teleport to="body">
+            <div
+              v-if="colorsOpen"
+              :id="colorsPanelId"
+              ref="colorsPanelEl"
+              class="colors-popover"
+              tabindex="-1"
+              :style="colorsPanelStyle"
+            >
+              <ColorsPanel
+                class="colors-popover-panel"
+                :palette="palette"
+                :ramps="ramps"
+                :queries="actions.colorQueries.value"
+                :rules="actions.colorRules.value"
+                :keys="actions.valueIndex.value"
+                :elements="actions.colorElements.value"
+                :has-search-start="actions.searchStartId.value !== undefined"
+                :element-label="actions.labelOfId"
+                @row-color="actions.setRowColor"
+                @each-query="actions.colorEachQuery()"
+                @update:rules="actions.setColorRules"
+                @distance-start="actions.colorByDistance('start')"
+                @element-color="actions.setElementColorById"
+                @clear-all="actions.clearColors()"
+                @close="closeColors"
+              />
+            </div>
+          </Teleport>
         </div>
         <div class="view-toggle" role="group" aria-label="Result view">
           <button
@@ -361,6 +416,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         v-if="view === 'graph' && actions.colorLegend.value.length"
         :entries="actions.colorLegend.value"
         :palette="palette"
+        :ramps="ramps"
         @edit="colorsOpen = true"
       />
 
@@ -471,10 +527,21 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   }
 }
 .colors-popover {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  right: 0;
-  z-index: var(--z-index-dropdown);
+  position: fixed;
+  z-index: var(--z-index-popover);
+  display: flex;
+  flex-direction: column;
+
+  &:focus {
+    outline: none;
+  }
+}
+// Shrinks to the room the popover has, scrolling inside it; nested to win
+// over the panel's own limits whatever order the styles load in.
+.colors-popover .colors-popover-panel {
+  min-height: 0;
+  max-width: 100%;
+  max-height: none;
 }
 .view-toggle {
   display: flex;

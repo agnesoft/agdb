@@ -53,6 +53,10 @@
   --z-index-notification: 10;
   --z-index-notification-new: 1100;
   --z-index-dropdown: 400;
+  /* Popovers stay above a maximised dashboard widget (at the dropdown level). */
+  --z-index-popover: 401;
+  /* A context menu opens above an open popover. */
+  --z-index-context-menu: 402;
 
   --orange-background: #d8862122;
 
@@ -107,15 +111,54 @@
 
   /*
    * Categorical colours for graph colour rules, in fixed order: green, cyan,
-   * yellow, violet, red. One per hue family, so no two read alike; blue and
+   * yellow, violet, red, plum, indigo. Plum and indigo are deeper steps, so
+   * they stay apart from violet and from the selected blue; bright blue and
    * orange are left out, they mean selected and hovered. Validated for colour
-   * vision deficiency, all pairs.
+   * vision deficiency and normal vision, all pairs, in both modes.
    */
   --graph-palette-1: #17890b;
   --graph-palette-2: #2dbad8;
   --graph-palette-3: #eda100;
   --graph-palette-4: #9752fe;
   --graph-palette-5: #f92240;
+  --graph-palette-6: #7d376e;
+  --graph-palette-7: #3f38c6;
+  /*
+   * Scales for gradients (by value, by distance), low to high, one per rule.
+   * Teal, purple and rose are one hue each, away from the selected blue and
+   * the hovered orange. Validated as ordinal ramps: monotone lightness,
+   * visible steps, the pale end at 2:1 on the graph background. "multi"
+   * goes from yellow-green to blue: also monotone in lightness, its hues set
+   * the steps further apart.
+   */
+  --graph-ramp-teal-1: #04c5b5;
+  --graph-ramp-teal-2: #0cab9d;
+  --graph-ramp-teal-3: #039286;
+  --graph-ramp-teal-4: #087970;
+  --graph-ramp-teal-5: #03625a;
+  --graph-ramp-teal-6: #044b45;
+  --graph-ramp-teal-7: #013631;
+  --graph-ramp-purple-1: #bb91ff;
+  --graph-ramp-purple-2: #a47ae7;
+  --graph-ramp-purple-3: #8e63ce;
+  --graph-ramp-purple-4: #794db6;
+  --graph-ramp-purple-5: #64379e;
+  --graph-ramp-purple-6: #501f86;
+  --graph-ramp-purple-7: #3d006f;
+  --graph-ramp-rose-1: #fb78b0;
+  --graph-ramp-rose-2: #e2629a;
+  --graph-ramp-rose-3: #ca4b85;
+  --graph-ramp-rose-4: #b23471;
+  --graph-ramp-rose-5: #9a1a5d;
+  --graph-ramp-rose-6: #7f0049;
+  --graph-ramp-rose-7: #600136;
+  --graph-ramp-multi-1: #acb900;
+  --graph-ramp-multi-2: #4caf47;
+  --graph-ramp-multi-3: #089474;
+  --graph-ramp-multi-4: #087679;
+  --graph-ramp-multi-5: #025a73;
+  --graph-ramp-multi-6: #013d73;
+  --graph-ramp-multi-7: #230177;
   /* Nodes no colour applies to, while colours are in use. */
   --graph-uncolored-color: var(--gray-5);
 }
@@ -156,6 +199,37 @@
     --graph-palette-3: #c98500;
     --graph-palette-4: #9130db;
     --graph-palette-5: #d71033;
+    --graph-palette-6: #a65e8c;
+    --graph-palette-7: #5257a3;
+    /* Low steps recede into the dark background, high ones are bright. */
+    --graph-ramp-teal-1: #05635b;
+    --graph-ramp-teal-2: #037b71;
+    --graph-ramp-teal-3: #0b9488;
+    --graph-ramp-teal-4: #08aea0;
+    --graph-ramp-teal-5: #13c8b9;
+    --graph-ramp-teal-6: #43e1d1;
+    --graph-ramp-teal-7: #63fae9;
+    --graph-ramp-purple-1: #6a3ea5;
+    --graph-ramp-purple-2: #7e53bc;
+    --graph-ramp-purple-3: #9369d4;
+    --graph-ramp-purple-4: #a87eeb;
+    --graph-ramp-purple-5: #bd96fe;
+    --graph-ramp-purple-6: #ceb5ff;
+    --graph-ramp-purple-7: #e1d2fe;
+    --graph-ramp-rose-1: #9d1e60;
+    --graph-ramp-rose-2: #b53874;
+    --graph-ramp-rose-3: #cd4e88;
+    --graph-ramp-rose-4: #e6659e;
+    --graph-ramp-rose-5: #fe7bb3;
+    --graph-ramp-rose-6: #ffa5c8;
+    --graph-ramp-rose-7: #fecadd;
+    --graph-ramp-multi-1: #5644b4;
+    --graph-ramp-multi-2: #0a6fcf;
+    --graph-ramp-multi-3: #0b94b8;
+    --graph-ramp-multi-4: #0ab3b0;
+    --graph-ramp-multi-5: #0ed492;
+    --graph-ramp-multi-6: #a5e263;
+    --graph-ramp-multi-7: #ffe64b;
     --graph-uncolored-color: var(--gray-2);
   }
 }

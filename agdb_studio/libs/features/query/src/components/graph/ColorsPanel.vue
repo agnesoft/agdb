@@ -2,6 +2,7 @@
 import type { ColorRule, PaletteSlot } from "../../utils/graphColorRules";
 import ColorSwatchPicker from "./ColorSwatchPicker.vue";
 import ColorRulesEditor, { type ValueIndexEntry } from "./ColorRulesEditor.vue";
+import type { RampName } from "../../utils/graphStyle";
 
 /** One query of the last run, as it can be coloured. */
 export type ColorQuery = {
@@ -20,16 +21,22 @@ export type ColorElement = { id: number; slot: PaletteSlot; label: string };
  */
 defineProps<{
   palette: readonly string[];
+  ramps: Readonly<Record<RampName, readonly string[]>>;
   queries: readonly ColorQuery[];
   rules: readonly ColorRule[];
   keys: readonly ValueIndexEntry[];
   elements: readonly ColorElement[];
+  /** The last run searched from a node that is shown. */
+  hasSearchStart?: boolean;
+  /** The label of a shown element, for distance rules. */
+  elementLabel?: (id: number) => string;
 }>();
 
 const emit = defineEmits<{
   "row-color": [rowId: string, slot: PaletteSlot | undefined];
   "each-query": [];
   "update:rules": [rules: ColorRule[]];
+  "distance-start": [];
   "element-color": [id: number, slot: PaletteSlot | undefined];
   "clear-all": [];
   close: [];
@@ -95,9 +102,21 @@ const emit = defineEmits<{
       <ColorRulesEditor
         :rules="rules"
         :palette="palette"
+        :ramps="ramps"
         :keys="keys"
+        :element-label="elementLabel"
         @update:rules="(next) => emit('update:rules', next)"
       />
+      <button
+        v-if="hasSearchStart"
+        type="button"
+        class="button button-transparent link-button"
+        data-testid="colors-distance-start"
+        @click="emit('distance-start')"
+      >
+        Colour by distance from the search start
+      </button>
+      <p class="hint">Right-click a node to colour by distance from it.</p>
     </section>
 
     <section class="section" data-testid="colors-elements">
@@ -139,6 +158,7 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 0.6rem;
   width: 26rem;
+  // Fallbacks: anchored as a popover, the popover sets the room it has.
   max-width: calc(100vw - 2rem);
   max-height: 70vh;
   overflow-y: auto;

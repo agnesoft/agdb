@@ -19,7 +19,7 @@ import {
   type GraphTheme,
   type HighlightState,
 } from "../../utils/graphStyle";
-import { slotColor } from "../../utils/graphColorRules";
+import { resolveColor } from "../../utils/graphColorRules";
 import {
   createLinkGradientMaterials,
   GRADIENT_MAX_LINKS,
@@ -58,8 +58,8 @@ let resizeObserver: ResizeObserver | undefined;
 /* v8 ignore start -- @preserve: accessors are invoked by the WebGL renderer */
 /** The colour a colour rule gives the element, if any. */
 const customColor = (element: GraphNode | GraphLink): string | undefined => {
-  const slot = actions.colorSlotOf(element);
-  return slot === undefined ? undefined : slotColor(theme.palette, slot);
+  const color = actions.colorOf(element);
+  return color && resolveColor(theme.palette, theme.ramps, color);
 };
 const nodeColor = (node: object) =>
   getNodeColor(

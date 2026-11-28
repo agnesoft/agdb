@@ -1,5 +1,6 @@
 use super::StorageData;
 use super::StorageSlice;
+use super::segments::Segments;
 use super::write_ahead_log::remove_wal;
 use crate::DbError;
 use crate::DbErrorType;
@@ -10,7 +11,8 @@ use std::sync::Arc;
 
 /// In-memory buffer implementing [`StorageData`].
 ///
-/// Reads return a non-owning slice into the underlying buffer.
+/// Reads return a non-owning slice into the underlying buffer, see
+/// [`Segments`] for how the read transactions share it with the writer.
 /// [`backup()`](StorageData::backup) writes the buffer to a file
 /// through the platform `P`, see [`MemoryStorage`] for the production one,
 /// while [`flush()`](StorageData::flush) is a no-op.
@@ -18,7 +20,7 @@ use std::sync::Arc;
 /// Offers unmatched performance but **no persistence**.
 pub struct MemoryStorageImpl<P: Platform> {
     platform: Arc<P>,
-    buffer: Vec<u8>,
+    buffer: Segments,
     name: String,
     /// Overlay limit for the page Writer. Defaults to
     /// `DEFAULT_OVERLAY_LIMIT`. The MVCC layer sets it to `u64::MAX`
@@ -26,6 +28,7 @@ pub struct MemoryStorageImpl<P: Platform> {
     /// The public `set_overlay_limit` is a no-op — only the internal
     /// `set_internal_overlay_limit` changes this.
     overlay_limit: u64,
+    memory_limit: Option<u64>,
 }
 
 /// The [`MemoryStorageImpl`] on the production [`PlatformImpl`].
@@ -41,15 +44,20 @@ impl<P: Platform> MemoryStorageImpl<P> {
     /// Constructs the storage `name` with the `buffer` backed up to the
     /// file system of the `platform`.
     pub fn from_buffer_with_platform(platform: Arc<P>, name: &str, buffer: Vec<u8>) -> Self {
+        Self::from_segments(platform, name, Segments::from(&buffer[..]))
+    }
+
+    pub(crate) fn from_segments(platform: Arc<P>, name: &str, buffer: Segments) -> Self {
         Self {
             platform,
             buffer,
             name: name.to_string(),
             overlay_limit: super::DEFAULT_OVERLAY_LIMIT,
+            memory_limit: None,
         }
     }
 
-    pub(crate) fn bytes(&self) -> &[u8] {
+    pub(crate) fn bytes(&self) -> &Segments {
         &self.buffer
     }
 
@@ -66,15 +74,15 @@ impl<P: Platform> MemoryStorageImpl<P> {
     }
 }
 
-impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
+impl<P: Platform + Default + 'static> StorageData for MemoryStorageImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         remove_wal(&*self.platform, name)?;
-        self.platform.fs().write(name, &self.buffer)?;
+        self.platform.fs().write(name, self.buffer.to_vec())?;
         Ok(())
     }
 
     fn copy(&self, name: &str) -> Result<Self, DbError> {
-        Ok(Self::from_buffer_with_platform(
+        Ok(Self::from_segments(
             self.platform.clone(),
             name,
             self.buffer.clone(),
@@ -90,7 +98,7 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
     }
 
     fn len(&self) -> u64 {
-        self.buffer.len() as u64
+        self.buffer.len()
     }
 
     fn name(&self) -> &str {
@@ -111,7 +119,7 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
             ));
         }
 
-        Ok(StorageSlice::from(&self.buffer[pos as usize..end as usize]))
+        Ok(self.buffer.read(pos, value_len))
     }
 
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
@@ -120,7 +128,11 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        self.buffer.resize(new_len as usize, 0);
+        if self.len() < new_len {
+            self.check_len(new_len)?;
+        }
+
+        self.buffer.resize(new_len);
         Ok(())
     }
 
@@ -128,8 +140,28 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
         self.overlay_limit
     }
 
-    fn supports_epoch_reads(&self) -> bool {
-        true
+    fn check_len(&self, len: u64) -> Result<(), DbError> {
+        match self.memory_limit {
+            Some(limit) if limit < len => Err(DbError::storage(
+                DbErrorType::NotAllowed,
+                format!("Storage length {len} exceeds memory limit {limit}"),
+            )),
+            _ => Ok(()),
+        }
+    }
+
+    fn set_memory_limit(&mut self, limit: Option<u64>) {
+        self.memory_limit = limit.filter(|&limit| limit != 0);
+    }
+
+    fn memory_limit(&self) -> Option<u64> {
+        self.memory_limit
+    }
+
+    fn snapshot(&self) -> Option<crate::storage::StorageSnapshot> {
+        Some(crate::storage::StorageSnapshot::Segments(
+            self.buffer.clone(),
+        ))
     }
 
     fn disable_spill(&mut self) {
@@ -141,16 +173,13 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
             return Ok(());
         }
 
-        let current_len = self.len();
         let end = pos + bytes.len() as u64;
 
-        if end <= current_len {
-            self.buffer[pos as usize..end as usize].copy_from_slice(bytes);
-        } else {
-            self.buffer.resize(pos as usize, 0);
-            self.buffer.extend_from_slice(bytes);
+        if self.len() < end {
+            self.check_len(end)?;
         }
 
+        self.buffer.write(pos, bytes);
         Ok(())
     }
 }
@@ -186,7 +215,7 @@ mod tests {
                 let storage = MemoryStorage::from_buffer(NAME, vec![1, 2]);
 
                 assert_eq!(storage.name(), NAME);
-                assert_eq!(storage.bytes(), [1, 2]);
+                assert_eq!(storage.bytes().to_vec(), [1, 2]);
             }
         }
     }
@@ -215,7 +244,7 @@ mod tests {
                 let storage =
                     MemoryStorageImpl::from_buffer_with_platform(platform(), NAME, vec![1, 2]);
 
-                assert_eq!(storage.bytes(), [1, 2]);
+                assert_eq!(storage.bytes().to_vec(), [1, 2]);
             }
         }
 
@@ -229,7 +258,7 @@ mod tests {
 
                 let storage = open(&platform);
 
-                assert_eq!(storage.bytes(), [1, 2]);
+                assert_eq!(storage.bytes().to_vec(), [1, 2]);
             }
 
             #[test]
@@ -426,6 +455,46 @@ mod tests {
                         open(&platform()),
                     );
                 }
+
+                #[test]
+                fn resize_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::resize::resize_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), true,
+                    );
+                }
+            }
+
+            mod check_len {
+                use super::*;
+
+                #[test]
+                fn check_len_should_fail_past_memory_limit_if_bounded() {
+                    crate::storage::tests::storage_data::check_len::check_len_should_fail_past_memory_limit_if_bounded(
+                        open(&platform()), true,
+                    );
+                }
+            }
+
+            mod set_memory_limit {
+                use super::*;
+
+                #[test]
+                fn set_memory_limit_should_set_limit_with_zero_as_none() {
+                    crate::storage::tests::storage_data::set_memory_limit::set_memory_limit_should_set_limit_with_zero_as_none(
+                        open(&platform()),
+                    );
+                }
+            }
+
+            mod memory_limit {
+                use super::*;
+
+                #[test]
+                fn memory_limit_should_default_to_none() {
+                    crate::storage::tests::storage_data::memory_limit::memory_limit_should_default_to_none(
+                        open(&platform()),
+                    );
+                }
             }
 
             mod set_overlay_limit {
@@ -506,6 +575,13 @@ mod tests {
                 fn write_empty_should_do_nothing() {
                     crate::storage::tests::storage_data::write::write_empty_should_do_nothing(
                         open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::write::write_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), true,
                     );
                 }
             }

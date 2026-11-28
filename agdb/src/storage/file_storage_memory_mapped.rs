@@ -31,16 +31,16 @@ impl<P: Platform> FileStorageMemoryMappedImpl<P> {
     /// `platform`, see [`StorageData::new()`].
     pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {
         let file = FileStorageImpl::with_platform(platform.clone(), name)?;
-        let buffer = file.read_all()?;
+        let buffer = file.read_segments()?;
 
         Ok(Self {
             file,
-            memory: MemoryStorageImpl::from_buffer_with_platform(platform, name, buffer),
+            memory: MemoryStorageImpl::from_segments(platform, name, buffer),
         })
     }
 }
 
-impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
+impl<P: Platform + Default + 'static> StorageData for FileStorageMemoryMappedImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         self.file.backup(name)
     }
@@ -48,18 +48,14 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         let file = self.file.copy(name)?;
         let buffer = if self.file.is_deferring() {
-            file.read_all()?
+            file.read_segments()?
         } else {
-            self.memory.bytes().to_vec()
+            self.memory.bytes().clone()
         };
 
         Ok(Self {
             file,
-            memory: MemoryStorageImpl::from_buffer_with_platform(
-                self.file.platform().clone(),
-                name,
-                buffer,
-            ),
+            memory: MemoryStorageImpl::from_segments(self.file.platform().clone(), name, buffer),
         })
     }
 
@@ -84,6 +80,18 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
 
     fn overlay_limit(&self) -> u64 {
         self.file.overlay_limit()
+    }
+
+    fn check_len(&self, len: u64) -> Result<(), DbError> {
+        self.memory.check_len(len)
+    }
+
+    fn set_memory_limit(&mut self, limit: Option<u64>) {
+        self.memory.set_memory_limit(limit);
+    }
+
+    fn memory_limit(&self) -> Option<u64> {
+        self.memory.memory_limit()
     }
 
     fn set_sync_mode(&mut self, mode: super::SyncMode) {
@@ -114,8 +122,8 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
         self.memory.read(pos, value_len)
     }
 
-    fn supports_epoch_reads(&self) -> bool {
-        true
+    fn snapshot(&self) -> Option<crate::storage::StorageSnapshot> {
+        self.memory.snapshot()
     }
 
     fn disable_spill(&mut self) {
@@ -128,6 +136,10 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
+        if self.len() < new_len {
+            self.check_len(new_len)?;
+        }
+
         self.file.defer_resize(new_len, self.memory.bytes());
         self.memory
             .resize(new_len)
@@ -135,6 +147,12 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        let end = pos + bytes.len() as u64;
+
+        if self.len() < end {
+            self.check_len(end)?;
+        }
+
         self.file
             .defer_write(pos, bytes.len() as u64, self.memory.bytes());
         self.memory
@@ -144,12 +162,14 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
         self.file.recover_from_wal()?;
-        let buffer = self.file.read_all()?;
-        self.memory = MemoryStorageImpl::from_buffer_with_platform(
+        let buffer = self.file.read_segments()?;
+        let memory_limit = self.memory.memory_limit();
+        self.memory = MemoryStorageImpl::from_segments(
             self.file.platform().clone(),
             self.file.name(),
             buffer,
         );
+        self.memory.set_memory_limit(memory_limit);
         Ok(())
     }
 }
@@ -189,7 +209,7 @@ mod tests {
 
                 let storage = open(&platform);
 
-                assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
             }
 
             #[test]
@@ -217,7 +237,7 @@ mod tests {
                 let storage = open(&platform);
 
                 // THEN the write is rolled back and the log is emptied
-                assert_eq!(storage.memory.bytes(), [1, 2, 3, 4]);
+                assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3, 4]);
                 drop(storage);
                 assert_eq!(platform.fs().read(NAME).unwrap(), [1, 2, 3, 4]);
                 assert!(platform.fs().read(WAL).unwrap().is_empty());
@@ -277,7 +297,7 @@ mod tests {
 
                     let copy = storage.copy("/copy").unwrap();
 
-                    assert_eq!(copy.memory.bytes(), [1, 2]);
+                    assert_eq!(copy.memory.bytes().to_vec(), [1, 2]);
                 }
 
                 #[test]
@@ -354,10 +374,10 @@ mod tests {
                     storage.flush().unwrap();
 
                     // THEN the file holds the bytes of the memory and the log nothing
-                    assert_eq!(storage.memory.bytes(), [8, 2, 0, 0, 0, 9]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [8, 2, 0, 0, 0, 9]);
                     assert_eq!(storage.file.read_all().unwrap(), [8, 2, 0, 0, 0, 9]);
                     drop(storage);
-                    assert_eq!(open(&platform).memory.bytes(), [8, 2, 0, 0, 0, 9]);
+                    assert_eq!(open(&platform).memory.bytes().to_vec(), [8, 2, 0, 0, 0, 9]);
                 }
 
                 #[test]
@@ -409,7 +429,7 @@ mod tests {
                         platform.fs().crash();
 
                         assert_eq!(
-                            open(&platform).memory.bytes(),
+                            open(&platform).memory.bytes().to_vec(),
                             [1, 2, 3, 4],
                             "op: {op:?}, path: {path}"
                         );
@@ -423,6 +443,39 @@ mod tests {
                 #[test]
                 fn is_empty_should_be_true_only_without_bytes() {
                     crate::storage::tests::storage_data::is_empty::is_empty_should_be_true_only_without_bytes(open(&platform()));
+                }
+            }
+
+            mod check_len {
+                use super::*;
+
+                #[test]
+                fn check_len_should_fail_past_memory_limit_if_bounded() {
+                    crate::storage::tests::storage_data::check_len::check_len_should_fail_past_memory_limit_if_bounded(
+                        open(&platform()), true,
+                    );
+                }
+            }
+
+            mod set_memory_limit {
+                use super::*;
+
+                #[test]
+                fn set_memory_limit_should_set_limit_with_zero_as_none() {
+                    crate::storage::tests::storage_data::set_memory_limit::set_memory_limit_should_set_limit_with_zero_as_none(
+                        open(&platform()),
+                    );
+                }
+            }
+
+            mod memory_limit {
+                use super::*;
+
+                #[test]
+                fn memory_limit_should_default_to_none() {
+                    crate::storage::tests::storage_data::memory_limit::memory_limit_should_default_to_none(
+                        open(&platform()),
+                    );
                 }
             }
 
@@ -602,7 +655,7 @@ mod tests {
 
                     assert_eq!(storage.file.read_all().unwrap(), [1, 2, 3, 0, 0]);
                     storage.recover_from_wal().unwrap();
-                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
                 }
 
                 #[test]
@@ -620,7 +673,14 @@ mod tests {
 
                     platform.fs().clear_faults();
                     storage.recover_from_wal().unwrap();
-                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
+                }
+
+                #[test]
+                fn resize_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::resize::resize_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), true,
+                    );
                 }
             }
 
@@ -691,7 +751,7 @@ mod tests {
 
                     assert_eq!(storage.file.read_all().unwrap(), [1, 4, 5, 6]);
                     storage.recover_from_wal().unwrap();
-                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
                 }
 
                 #[test]
@@ -709,7 +769,14 @@ mod tests {
 
                     platform.fs().clear_faults();
                     storage.recover_from_wal().unwrap();
-                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
+                }
+
+                #[test]
+                fn write_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::write::write_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), true,
+                    );
                 }
             }
 
@@ -763,7 +830,7 @@ mod tests {
 
                     storage.recover_from_wal().unwrap();
 
-                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                    assert_eq!(storage.memory.bytes().to_vec(), [1, 2, 3]);
                     storage.flush().unwrap();
                     assert_eq!(storage.file.read_all().unwrap(), [1, 2, 3]);
                 }

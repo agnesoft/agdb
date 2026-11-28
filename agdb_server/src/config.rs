@@ -1,3 +1,4 @@
+use agdb::StorageConfig;
 use agdb::SyncMode;
 use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
@@ -77,6 +78,14 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
 
     Ok(Config::new(config))
+}
+
+pub(crate) fn server_storage(config: &ConfigImpl) -> StorageConfig {
+    // WHY: the memory_limit applies to the user databases only, the server must not fail on it.
+    StorageConfig {
+        memory_limit: None,
+        ..config.storage
+    }
 }
 
 pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
@@ -220,6 +229,14 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                     config.storage.overlay_limit = value
                         .parse()
                         .map_err(|e| format!("Invalid overlay_limit: {e:?}"))?
+                }
+                "memory_limit" => {
+                    config.storage.memory_limit = Some(
+                        value
+                            .parse()
+                            .map_err(|e| format!("Invalid memory_limit: {e:?}"))?,
+                    )
+                    .filter(|&limit| limit != 0)
                 }
                 _ => return Err(format!("Unknown key: {key}")),
             }
@@ -679,5 +696,25 @@ mod tests {
 
         let err = config::from_str("overlay_limit: -1").unwrap_err();
         assert!(err.starts_with("Invalid overlay_limit"));
+    }
+
+    #[test]
+    fn memory_limit_values() {
+        let config = default_config();
+        assert_eq!(config.storage.memory_limit, None);
+
+        let config = config::from_str("memory_limit: 1024").unwrap();
+        assert_eq!(config.storage.memory_limit, Some(1024));
+        assert_eq!(config::server_storage(&config).memory_limit, None);
+        assert_eq!(
+            config::server_storage(&config).overlay_limit,
+            config.storage.overlay_limit
+        );
+
+        let config = config::from_str("memory_limit: 0").unwrap();
+        assert_eq!(config.storage.memory_limit, None);
+
+        let err = config::from_str("memory_limit: -1").unwrap_err();
+        assert!(err.starts_with("Invalid memory_limit"));
     }
 }

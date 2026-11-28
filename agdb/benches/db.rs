@@ -6,12 +6,14 @@ use agdb::FileStorage;
 use agdb::FileStorageMemoryMapped;
 use agdb::MemoryStorage;
 use agdb::QueryBuilder;
+use agdb::StorageConfig;
 use agdb::StorageData;
 use agplatform::TestDir;
 use std::process::ExitCode;
 
 const NODES: u64 = 1000;
 const LARGE: usize = 64 << 10;
+const CACHE: u64 = 16 << 20;
 
 fn main() -> ExitCode {
     agbench::main(&[
@@ -25,6 +27,8 @@ fn main() -> ExitCode {
         transaction_nodes_edges,
         insert_nodes_bulk,
         remove_nodes_bulk,
+        select_values,
+        search_select,
     ])
 }
 
@@ -34,7 +38,8 @@ struct Dbs {
     memory: DbImpl<MemoryStorage>,
     mapped: DbImpl<FileStorageMemoryMapped>,
     file: DbImpl<FileStorage>,
-    counters: [u64; 3],
+    cached: DbImpl<FileStorage>,
+    counters: [u64; 4],
     _dir: TestDir,
 }
 
@@ -64,6 +69,15 @@ fn db<S: StorageData>(dir: &TestDir, name: &str, index: bool) -> DbImpl<S> {
     db
 }
 
+fn cached(dir: &TestDir, index: bool) -> DbImpl<FileStorage> {
+    let db: DbImpl<FileStorage> = db(dir, "cached.agdb", index);
+    db.set_storage_config(StorageConfig {
+        memory_limit: Some(CACHE),
+        ..db.storage_config()
+    });
+    db
+}
+
 fn dbs_with(index: bool) -> Dbs {
     let dir = TestDir::temp();
 
@@ -71,7 +85,8 @@ fn dbs_with(index: bool) -> Dbs {
         memory: db(&dir, "memory.agdb", index),
         mapped: db(&dir, "mapped.agdb", index),
         file: db(&dir, "file.agdb", index),
-        counters: [NODES; 3],
+        cached: cached(&dir, index),
+        counters: [NODES; 4],
         _dir: dir,
     }
 }
@@ -87,6 +102,7 @@ macro_rules! targets {
             .target("memory", |d| $op(&d.memory, &mut d.counters[0]))
             .target("mapped", |d| $op(&d.mapped, &mut d.counters[1]))
             .target("file", |d| $op(&d.file, &mut d.counters[2]))
+            .target("file_cached", |d| $op(&d.cached, &mut d.counters[3]))
             .run()
     };
 }
@@ -229,4 +245,31 @@ fn remove_nodes_bulk(bench: &mut Bench) {
         bench.benchmark("db/insert_remove_1000_nodes", dbs),
         bulk_remove
     );
+}
+
+fn select<S: StorageData>(db: &DbImpl<S>, counter: &mut u64) -> u64 {
+    *counter = *counter % NODES + 1;
+    db.exec(QueryBuilder::select().ids(*counter as i64 + 1).query())
+        .unwrap()
+        .result
+}
+
+fn select_values(bench: &mut Bench) {
+    targets!(bench.benchmark("db/select_values", dbs), select);
+}
+
+fn search<S: StorageData>(db: &DbImpl<S>, _: &mut u64) -> u64 {
+    db.exec(
+        QueryBuilder::select()
+            .search()
+            .elements()
+            .limit(100)
+            .query(),
+    )
+    .unwrap()
+    .result
+}
+
+fn search_select(bench: &mut Bench) {
+    targets!(bench.benchmark("db/search_select_100", dbs), search);
 }

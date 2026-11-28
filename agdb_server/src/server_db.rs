@@ -136,7 +136,8 @@ pub(crate) async fn new(
     let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
     let db = ServerDb::new(&db_name, config.token_expiry_seconds)?;
 
-    db.db.set_storage_config(config.storage);
+    db.db
+        .set_storage_config(crate::config::server_storage(config));
 
     let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
         admin_id

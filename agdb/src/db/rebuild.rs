@@ -425,6 +425,7 @@ fn target<S: StorageData>(storage: &S) -> Result<S, DbError> {
     let mut target = storage.create(&format!("{}.rebuild", storage.name()))?;
     target.set_sync_mode(storage.sync_mode());
     target.set_overlay_limit(storage.overlay_limit());
+    target.set_memory_limit(storage.memory_limit());
     Ok(target)
 }
 
@@ -594,7 +595,7 @@ mod tests {
     fn exec_mut<S: StorageData>(root: &mut Root<S>, query: impl QueryMut) -> QueryResult {
         let mut transaction = TransactionMut::new(root.begin().unwrap());
         let result = transaction.exec_mut(query).unwrap();
-        transaction.commit().unwrap();
+        transaction.commit(1).unwrap();
         result
     }
 
@@ -1175,6 +1176,7 @@ mod tests {
             let mut storage = legacy_file(&platform, &database().0);
             storage.set_sync_mode(SyncMode::Commit);
             storage.set_overlay_limit(7);
+            storage.set_memory_limit(Some(8192));
 
             let target = target(&storage).unwrap();
 
@@ -1182,6 +1184,7 @@ mod tests {
             assert_eq!(target.len(), 0);
             assert_eq!(target.sync_mode(), SyncMode::Commit);
             assert_eq!(target.overlay_limit(), 7);
+            assert_eq!(target.memory_limit(), Some(8192));
         }
     }
 }

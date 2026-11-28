@@ -109,7 +109,7 @@ impl<P: Platform> StorageSimulator<P> {
     }
 }
 
-impl<P: Platform + Default> StorageData for StorageSimulator<P> {
+impl<P: Platform + Default + 'static> StorageData for StorageSimulator<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         self.platform.fs().write(name, self.bytes(0, self.len))?;
         Ok(())
@@ -558,6 +558,42 @@ pub(crate) mod tests {
                 fn resize_should_zero_new_bytes_and_cut_off_others() {
                     contract::resize::resize_should_zero_new_bytes_and_cut_off_others(open());
                 }
+
+                #[test]
+                fn resize_past_memory_limit_should_fail_if_bounded() {
+                    contract::resize::resize_past_memory_limit_should_fail_if_bounded(
+                        open(),
+                        false,
+                    );
+                }
+            }
+
+            mod check_len {
+                use super::*;
+
+                #[test]
+                fn check_len_should_fail_past_memory_limit_if_bounded() {
+                    contract::check_len::check_len_should_fail_past_memory_limit_if_bounded(
+                        open(),
+                        false,
+                    );
+                }
+            }
+
+            mod set_memory_limit {
+                #[test]
+                fn set_memory_limit_should_set_limit_with_zero_as_none() {
+                    // WHY: the simulator models the file I/O, it has no memory limit to set.
+                }
+            }
+
+            mod memory_limit {
+                use super::*;
+
+                #[test]
+                fn memory_limit_should_default_to_none() {
+                    contract::memory_limit::memory_limit_should_default_to_none(open());
+                }
             }
 
             mod set_overlay_limit {
@@ -624,6 +660,11 @@ pub(crate) mod tests {
                 #[test]
                 fn write_past_end_should_zero_gap() {
                     contract::write::write_past_end_should_zero_gap(open());
+                }
+
+                #[test]
+                fn write_past_memory_limit_should_fail_if_bounded() {
+                    contract::write::write_past_memory_limit_should_fail_if_bounded(open(), false);
                 }
 
                 #[test]

@@ -130,16 +130,17 @@ impl<P: Platform> WriteAheadLog<P> {
         pos: u64,
         size: u64,
         value: &dyn Fn(&mut [u8]) -> Result<(), DbError>,
-    ) -> Result<(), DbError> {
+    ) -> Result<&[u8], DbError> {
         let staged_len = self.staged.len();
         let value_start = self.stage_record(pos, size);
-        let staged = value(&mut self.staged[value_start..][..size as usize]);
+        let staged = &mut self.staged[value_start..][..size as usize];
 
-        if staged.is_err() {
+        if let Err(error) = value(staged) {
             self.staged.truncate(staged_len);
+            return Err(error);
         }
 
-        staged
+        Ok(&self.staged[value_start..][..size as usize])
     }
 
     pub fn staged_len(&self) -> u64 {
@@ -798,12 +799,15 @@ mod tests {
                 let platform = test_platform();
                 let mut wal = open(&platform);
 
-                wal.stage_with(1, 3, &|buffer| {
-                    buffer.copy_from_slice(&[1, 2, 3]);
-                    Ok(())
-                })
-                .unwrap();
+                let staged = wal
+                    .stage_with(1, 3, &|buffer| {
+                        buffer.copy_from_slice(&[1, 2, 3]);
+                        Ok(())
+                    })
+                    .unwrap()
+                    .to_vec();
 
+                assert_eq!(staged, vec![1, 2, 3]);
                 assert_eq!(wal_len(&platform), 0);
                 wal.write_staged().unwrap();
                 assert_eq!(records(&wal), vec![(1, vec![1, 2, 3])]);

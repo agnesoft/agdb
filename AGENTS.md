@@ -277,6 +277,7 @@ The server reads a YAML-like config file (default: `agdb_server.yaml`). On first
 | `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                                                                                   |
 | `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed), `commit` (fsync on every commit) or `strict` (also fsync the cleared WAL) |
 | `overlay_limit`                | `67108864`              | Bytes of a transaction held in memory before they are written ahead of its commit                                  |
+| `memory_limit`                 | `0`                     | Bytes of memory per user database (`0` = unlimited): `memory`/`mapped` fail to grow past it, `file` caches reads    |
 
 ## Cluster / Raft
 

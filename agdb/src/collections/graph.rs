@@ -20,8 +20,8 @@ pub(crate) const GRAPH_SIZE: usize = 2 * RECORDS_SIZE;
 // Edge, fields of the id width: [from][to][next edge from][next edge to]
 // [previous edge from][previous edge to] then [data u64], 32 B with
 // `U32` ids, 64 B with `U64` ones (8 B of 0 at the end).
-// Free: [VACANT][next free slot] in fields of the width, VACANT all ones
-// for a node and 0 (no node) for an edge.
+// Free: [VACANT][next free slot][previous free slot] in fields of the
+// width, VACANT all ones for a node and 0 (no node) for an edge.
 const NODE_SHIFT: u32 = 5;
 const NODE_FIRST: u64 = 0;
 const NODE_COUNT: u64 = 16;
@@ -83,14 +83,21 @@ pub(crate) struct Edge {
 pub(crate) struct Elements<'a, V> {
     graph: &'a GraphHeader,
     view: &'a V,
-    edges: bool,
-    slot: u64,
+    pub(crate) edges: bool,
+    pub(crate) slot: u64,
 }
 
 fn invalid(id: DbId) -> DbError {
     DbError::graph(
         DbErrorType::InvalidIndex,
         format!("'{}' is invalid index", id.0),
+    )
+}
+
+fn full(limit: u64, kind: &str) -> DbError {
+    DbError::graph(
+        DbErrorType::OutOfBounds,
+        format!("Graph full ({limit} {kind}s), rebuild with 64-bit ids"),
     )
 }
 
@@ -166,6 +173,20 @@ impl GraphHeader {
         }
     }
 
+    pub(crate) fn elements_from<'a, V: View>(
+        &'a self,
+        view: &'a V,
+        slot: u64,
+        edges: bool,
+    ) -> Elements<'a, V> {
+        Elements {
+            graph: self,
+            view,
+            edges,
+            slot,
+        }
+    }
+
     #[inline]
     pub(crate) fn node(&self, view: &impl View, id: DbId) -> Result<Option<Node>, DbError> {
         if id.0 < 0 {
@@ -233,10 +254,52 @@ impl GraphHeader {
         Ok(node_id(slot))
     }
 
+    pub(crate) fn insert_node_at(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        id: DbId,
+    ) -> Result<(), DbError> {
+        if id.0 <= 0 {
+            return Err(invalid(id));
+        }
+
+        let slot = id.0 as u64;
+        self.nodes.take_at(view, alloc, self.limit, "node", slot)?;
+        self.nodes.write(view, slot, 0, &[0; 1 << NODE_SHIFT])
+    }
+
     pub(crate) fn insert_edge(
         &mut self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        from: DbId,
+        to: DbId,
+    ) -> Result<DbId, DbError> {
+        self.link_edge(view, alloc, None, from, to)
+    }
+
+    pub(crate) fn insert_edge_at(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        id: DbId,
+        from: DbId,
+        to: DbId,
+    ) -> Result<(), DbError> {
+        if 0 <= id.0 {
+            return Err(invalid(id));
+        }
+
+        self.link_edge(view, alloc, Some(id.0.unsigned_abs()), from, to)
+            .map(|_| ())
+    }
+
+    fn link_edge(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        slot: Option<u64>,
         from: DbId,
         to: DbId,
     ) -> Result<DbId, DbError> {
@@ -257,7 +320,13 @@ impl GraphHeader {
             }
         }
 
-        let slot = self.edges.take(view, alloc, self.limit, "edge")?;
+        let slot = match slot {
+            Some(slot) => {
+                self.edges.take_at(view, alloc, self.limit, "edge", slot)?;
+                slot
+            }
+            None => self.edges.take(view, alloc, self.limit, "edge")?,
+        };
         let next = [-origin.first_from.0 as u64, -destination.first_to.0 as u64];
         let width = self.edges.width;
         let mut record = [0_u8; RECORD];
@@ -395,7 +464,12 @@ impl GraphHeader {
     }
 
     /// Removes the node `id` with its edges, if it exists.
-    pub(crate) fn remove_node(&mut self, view: &mut impl ViewMut, id: DbId) -> Result<(), DbError> {
+    pub(crate) fn remove_node(
+        &mut self,
+        view: &mut impl ViewMut,
+        id: DbId,
+        mut freed: impl FnMut(DbId),
+    ) -> Result<(), DbError> {
         if self.node(view, id)?.is_none() {
             return Ok(());
         }
@@ -411,19 +485,51 @@ impl GraphHeader {
                 }
 
                 self.remove_edge_slot(view, edge)?;
+                freed(edge_id(edge));
             }
         }
 
-        self.nodes.release(view, slot)
+        self.nodes.release(view, slot)?;
+        freed(id);
+        Ok(())
     }
 
     /// Removes the edge `id`, if it exists.
-    pub(crate) fn remove_edge(&mut self, view: &mut impl ViewMut, id: DbId) -> Result<(), DbError> {
+    pub(crate) fn remove_edge(
+        &mut self,
+        view: &mut impl ViewMut,
+        id: DbId,
+        freed: impl FnOnce(DbId),
+    ) -> Result<(), DbError> {
         if self.edge(view, id)?.is_none() {
             return Ok(());
         }
 
-        self.remove_edge_slot(view, id.0.unsigned_abs())
+        self.remove_edge_slot(view, id.0.unsigned_abs())?;
+        freed(id);
+        Ok(())
+    }
+
+    pub(crate) fn free_head(&self, edges: bool) -> u64 {
+        self.records(edges).free
+    }
+
+    pub(crate) fn len(&self, edges: bool) -> u64 {
+        self.records(edges).len
+    }
+
+    pub(crate) fn next_free(
+        &self,
+        view: &impl View,
+        edges: bool,
+        slot: u64,
+    ) -> Result<u64, DbError> {
+        let records = self.records(edges);
+        records.get(view, slot, records.width)
+    }
+
+    fn records(&self, edges: bool) -> &Records {
+        if edges { &self.edges } else { &self.nodes }
     }
 
     fn remove_edge_slot(&mut self, view: &mut impl ViewMut, slot: u64) -> Result<(), DbError> {
@@ -585,12 +691,66 @@ impl Records {
     ) -> Result<u64, DbError> {
         if self.free != 0 {
             let slot = self.free;
-            self.free = self.get(view, slot, self.width)?;
-            self.frees -= 1;
+            self.unlink(view, slot)?;
             return Ok(slot);
         }
 
         self.append(view, alloc, limit, kind)
+    }
+
+    fn take_at(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        limit: u64,
+        kind: &str,
+        slot: u64,
+    ) -> Result<(), DbError> {
+        if slot < self.len {
+            if self.record(view, slot)?.is_some() {
+                return Err(DbError::graph(
+                    DbErrorType::NotAllowed,
+                    format!("The {kind} slot '{slot}' is taken"),
+                ));
+            }
+
+            return self.unlink(view, slot);
+        }
+
+        if limit < slot {
+            return Err(full(limit, kind));
+        }
+
+        while self.array.capacity() <= slot {
+            self.array.grow(view, alloc)?;
+        }
+
+        while self.len < slot {
+            self.len += 1;
+            self.release(view, self.len - 1)?;
+        }
+
+        self.len += 1;
+        Ok(())
+    }
+
+    fn unlink(&mut self, view: &mut impl ViewMut, slot: u64) -> Result<(), DbError> {
+        let width = self.width;
+        let next = self.get(view, slot, width)?;
+        let previous = self.get(view, slot, 2 * width)?;
+
+        if previous == 0 {
+            self.free = next;
+        } else {
+            self.set(view, previous, width, next)?;
+        }
+
+        if next != 0 {
+            self.set(view, next, 2 * width, previous)?;
+        }
+
+        self.frees -= 1;
+        Ok(())
     }
 
     /// Takes a new slot at the end, at most `limit`.
@@ -602,10 +762,7 @@ impl Records {
         kind: &str,
     ) -> Result<u64, DbError> {
         if limit < self.len {
-            return Err(DbError::graph(
-                DbErrorType::OutOfBounds,
-                format!("Graph full ({limit} {kind}s), rebuild with 64-bit ids"),
-            ));
+            return Err(full(limit, kind));
         }
 
         if self.array.capacity() <= self.len {
@@ -618,10 +775,15 @@ impl Records {
 
     fn release(&mut self, view: &mut impl ViewMut, slot: u64) -> Result<(), DbError> {
         let width = self.width as usize;
-        let mut bytes = [0_u8; 16];
+        let mut bytes = [0_u8; 24];
         bytes[..width].copy_from_slice(&self.vacant.to_le_bytes()[..width]);
         bytes[width..2 * width].copy_from_slice(&self.free.to_le_bytes()[..width]);
-        self.write(view, slot, 0, &bytes[..2 * width])?;
+        self.write(view, slot, 0, &bytes[..3 * width])?;
+
+        if self.free != 0 {
+            self.set(view, self.free, 2 * self.width, slot)?;
+        }
+
         self.free = slot;
         self.frees += 1;
         Ok(())
@@ -691,6 +853,8 @@ pub(crate) mod tests {
         live
     }
 
+    pub(crate) fn discard(_: DbId) {}
+
     fn layouts() -> [Layout; 2] {
         [IdWidth::U32, IdWidth::U64].map(|ids| Layout {
             page_shift: DEFAULT_PAGE_SHIFT,
@@ -721,9 +885,15 @@ pub(crate) mod tests {
     fn free_slots(records: &Records, view: &TestView) -> BTreeSet<u64> {
         let mut free = BTreeSet::new();
         let mut slot = records.free;
+        let mut previous = 0;
 
         while slot != 0 {
             assert!(free.insert(slot));
+            assert_eq!(
+                records.get(view, slot, 2 * records.width).unwrap(),
+                previous
+            );
+            previous = slot;
             slot = records.get(view, slot, records.width).unwrap();
         }
 
@@ -790,21 +960,31 @@ pub(crate) mod tests {
     ) {
         let nodes = model.nodes.iter().copied().collect::<Vec<_>>();
         let pick = |random: &mut XorShift| nodes[random.next(nodes.len() as u64) as usize];
+        // WHY: the slots concurrent transactions reserve: free or just past the end
+        let slot = |records: &Records, random: &mut XorShift| {
+            let mut slots = free_slots(records, view).into_iter().collect::<Vec<_>>();
+            slots.extend(records.len..records.len + 3);
+            slots[random.next(slots.len() as u64) as usize]
+        };
+        let mut freed = Vec::new();
 
-        match random.next(10) {
+        match random.next(13) {
             _ if nodes.is_empty() => {}
             0..=3 => {
                 let edges = model.edges.keys().copied().collect::<Vec<_>>();
 
                 if !edges.is_empty() {
                     let id = edges[random.next(edges.len() as u64) as usize];
-                    graph.remove_edge(view, DbId(id)).unwrap();
+                    graph
+                        .remove_edge(view, DbId(id), |id| freed.push(id))
+                        .unwrap();
                     model.edges.remove(&id);
+                    assert_eq!(freed, [DbId(id)]);
                 }
 
                 return;
             }
-            4..=7 => {
+            4..=6 => {
                 let (from, to) = (pick(random), pick(random));
                 let id = graph
                     .insert_edge(view, alloc, DbId(from), DbId(to))
@@ -812,13 +992,34 @@ pub(crate) mod tests {
                 assert!(model.edges.insert(id.0, (from, to)).is_none());
                 return;
             }
+            7 => {
+                let (from, to) = (pick(random), pick(random));
+                let id = edge_id(slot(&graph.edges, random));
+                graph
+                    .insert_edge_at(view, alloc, id, DbId(from), DbId(to))
+                    .unwrap();
+                assert!(model.edges.insert(id.0, (from, to)).is_none());
+                return;
+            }
             8 => {
                 let node = pick(random);
-                graph.remove_node(view, DbId(node)).unwrap();
+                graph
+                    .remove_node(view, DbId(node), |id| freed.push(id))
+                    .unwrap();
                 model.nodes.remove(&node);
+                let edges = model.edges.len();
                 model
                     .edges
                     .retain(|_, edge| edge.0 != node && edge.1 != node);
+                assert_eq!(freed.len(), 1 + edges - model.edges.len());
+                assert_eq!(freed.pop(), Some(DbId(node)));
+                assert!(freed.iter().all(|id| !model.edges.contains_key(&id.0)));
+                return;
+            }
+            9 => {
+                let id = node_id(slot(&graph.nodes, random));
+                graph.insert_node_at(view, alloc, id).unwrap();
+                assert!(model.nodes.insert(id.0));
                 return;
             }
             _ => {}
@@ -944,7 +1145,7 @@ pub(crate) mod tests {
                     let at = random.next(edges.len() as u64) as usize;
                     let removed = edges[at];
                     simulation.run(&mut edge_removes, size + 1, |view, _| {
-                        graph.remove_edge(view, removed.0)
+                        graph.remove_edge(view, removed.0, discard)
                     });
                     edges[at].0 = simulation.run(&mut unmeasured, size, |view, alloc| {
                         graph.insert_edge(view, alloc, removed.1, removed.2)
@@ -953,13 +1154,13 @@ pub(crate) mod tests {
 
                 for edge in edges {
                     simulation.run(&mut unmeasured, 0, |view, _| {
-                        graph.remove_edge(view, edge.0)
+                        graph.remove_edge(view, edge.0, discard)
                     });
                 }
 
                 for i in 0..SCALE {
                     simulation.run(&mut node_removes, SCALE - i, |view, _| {
-                        graph.remove_node(view, DbId(1 + i as i64))
+                        graph.remove_node(view, DbId(1 + i as i64), discard)
                     });
                 }
 
@@ -978,10 +1179,10 @@ pub(crate) mod tests {
             for layout in layouts() {
                 assert_failures(
                     |view, alloc| {
-                        // WHY: the first allocation of the graph then reads the header of the free run
-                        let pos = alloc.alloc(view, 3 * 1024).unwrap();
+                        // WHY: the allocations of the graph then read the header of the free run
+                        let pos = alloc.alloc(view, 7 * 1024).unwrap();
                         alloc.alloc(view, 1024).unwrap();
-                        alloc.free(view, pos, 3 * 1024).unwrap();
+                        alloc.free(view, pos, 7 * 1024).unwrap();
                         GraphHeader::new(layout)
                     },
                     |view, alloc, mut graph| {
@@ -996,10 +1197,16 @@ pub(crate) mod tests {
                         }
 
                         graph.insert_node(view, alloc)?;
-                        graph.remove_edge(view, DbId(-2))?;
-                        graph.remove_node(view, DbId(1))?;
+                        graph.remove_edge(view, DbId(-2), discard)?;
+                        graph.remove_node(view, DbId(1), discard)?;
                         graph.insert_node(view, alloc)?;
                         graph.insert_edge(view, alloc, DbId(2), DbId(2))?;
+                        graph.remove_node(view, DbId(5), discard)?;
+                        graph.remove_node(view, DbId(9), discard)?;
+                        graph.insert_node_at(view, alloc, DbId(5))?;
+                        graph.next_free(view, false, graph.free_head(false))?;
+                        graph.insert_node_at(view, alloc, DbId(40))?;
+                        graph.insert_edge_at(view, alloc, DbId(-30), DbId(2), DbId(3))?;
                         graph.set_data(view, DbId(2), 2)?;
                         graph.set_data(view, DbId(-3), 7)?;
                         graph.node(view, DbId(2))?;
@@ -1039,7 +1246,7 @@ pub(crate) mod tests {
                         }
 
                         graph.insert_edge(view, alloc, DbId(1), DbId(2)).unwrap();
-                        graph.remove_node(view, DbId(3)).unwrap();
+                        graph.remove_node(view, DbId(3), discard).unwrap();
                         assert_eq!(GraphHeader::decode(&graph.encode(), layout), graph);
                     });
                 }
@@ -1057,7 +1264,7 @@ pub(crate) mod tests {
                     let second = graph.insert_node(view, alloc).unwrap();
                     graph.insert_edge(view, alloc, first, second).unwrap();
                     graph.insert_edge(view, alloc, second, first).unwrap();
-                    graph.remove_edge(view, DbId(-1)).unwrap();
+                    graph.remove_edge(view, DbId(-1), discard).unwrap();
                     let ids = graph.elements(view).collect::<Result<Vec<_>, _>>().unwrap();
                     assert_eq!(ids, [DbId(1), DbId(2), DbId(-2)]);
                 });
@@ -1133,6 +1340,86 @@ pub(crate) mod tests {
                     let mut graph = GraphHeader::new(Layout::default());
                     graph.nodes.len = 1 << 32;
                     let error = graph.insert_node(view, alloc).unwrap_err();
+                    assert_eq!(
+                        error.description,
+                        "Graph full (4294967295 nodes), rebuild with 64-bit ids"
+                    );
+                    assert_eq!(graph.nodes.array.capacity(), 0);
+                });
+            }
+        }
+
+        mod insert_node_at {
+            use super::*;
+
+            #[test]
+            fn insert_node_at_free_slot_should_unlink_it_from_free_list() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+
+                    for _ in 0..4 {
+                        graph.insert_node(view, alloc).unwrap();
+                    }
+
+                    for node in [1, 2, 3] {
+                        graph.remove_node(view, DbId(node), discard).unwrap();
+                    }
+
+                    graph.insert_node_at(view, alloc, DbId(2)).unwrap();
+
+                    assert_eq!(graph.free_head(false), 3);
+                    assert_eq!(graph.next_free(view, false, 3).unwrap(), 1);
+                    assert_eq!(free_slots(&graph.nodes, view), BTreeSet::from([1, 3]));
+                    assert_eq!(graph.node(view, DbId(2)).unwrap(), Some(Node::default()));
+                    assert_eq!(graph.node_count(), 2);
+                });
+            }
+
+            #[test]
+            fn insert_node_at_past_end_should_free_slots_before_it() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    graph.insert_node(view, alloc).unwrap();
+
+                    graph.insert_node_at(view, alloc, DbId(100)).unwrap();
+
+                    assert_eq!(graph.len(false), 101);
+                    assert_eq!(
+                        free_slots(&graph.nodes, view),
+                        (2..100).collect::<BTreeSet<_>>()
+                    );
+                    assert_eq!(graph.free_head(false), 99);
+                    let ids = graph.elements(view).collect::<Result<Vec<_>, _>>().unwrap();
+                    assert_eq!(ids, [DbId(1), DbId(100)]);
+                    verify(alloc, view, &allocations(&graph));
+                });
+            }
+
+            #[test]
+            fn insert_node_at_taken_or_invalid_slot_should_fail() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    graph.insert_node(view, alloc).unwrap();
+
+                    let error = graph.insert_node_at(view, alloc, DbId(1)).unwrap_err();
+                    assert_eq!(error.description, "The node slot '1' is taken");
+
+                    for id in [0, -1] {
+                        let error = graph.insert_node_at(view, alloc, DbId(id)).unwrap_err();
+                        assert_eq!(error.description, format!("'{id}' is invalid index"));
+                    }
+
+                    assert_eq!(graph.node_count(), 1);
+                });
+            }
+
+            #[test]
+            fn insert_node_at_past_u32_slots_with_u32_ids_should_fail() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    let error = graph
+                        .insert_node_at(view, alloc, DbId(1 << 32))
+                        .unwrap_err();
                     assert_eq!(
                         error.description,
                         "Graph full (4294967295 nodes), rebuild with 64-bit ids"
@@ -1324,6 +1611,57 @@ pub(crate) mod tests {
             }
         }
 
+        mod insert_edge_at {
+            use super::*;
+
+            #[test]
+            fn insert_edge_at_should_link_edge_at_slot() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    let node = graph.insert_node(view, alloc).unwrap();
+                    graph.insert_edge(view, alloc, node, node).unwrap();
+
+                    graph
+                        .insert_edge_at(view, alloc, DbId(-3), node, node)
+                        .unwrap();
+
+                    assert_eq!(graph.len(true), 4);
+                    assert_eq!(graph.free_head(true), 2);
+                    let edge = graph.edge(view, DbId(-3)).unwrap().unwrap();
+                    assert_eq!((edge.from, edge.to, edge.next_from), (node, node, DbId(-1)));
+                    let node = graph.node(view, node).unwrap().unwrap();
+                    assert_eq!((node.first_from, node.from_count), (DbId(-3), 2));
+                });
+            }
+
+            #[test]
+            fn insert_edge_at_taken_or_invalid_slot_should_fail() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    let node = graph.insert_node(view, alloc).unwrap();
+                    graph.insert_edge(view, alloc, node, node).unwrap();
+
+                    let error = graph
+                        .insert_edge_at(view, alloc, DbId(-1), node, node)
+                        .unwrap_err();
+                    assert_eq!(error.description, "The edge slot '1' is taken");
+
+                    for id in [0, 1] {
+                        let error = graph
+                            .insert_edge_at(view, alloc, DbId(id), node, node)
+                            .unwrap_err();
+                        assert_eq!(error.description, format!("'{id}' is invalid index"));
+                    }
+
+                    let error = graph
+                        .insert_edge_at(view, alloc, DbId(-2), node, DbId(2))
+                        .unwrap_err();
+                    assert_eq!(error.description, "'2' is invalid index");
+                    assert_eq!((graph.edge_count(), graph.len(true)), (1, 2));
+                });
+            }
+        }
+
         mod remove_node {
             use super::*;
 
@@ -1333,7 +1671,7 @@ pub(crate) mod tests {
                     let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     let edge = graph.insert_edge(view, alloc, node, node).unwrap();
-                    graph.remove_node(view, edge).unwrap();
+                    graph.remove_node(view, edge, discard).unwrap();
                     assert_eq!((graph.node_count(), graph.edge_count()), (1, 1));
                 });
             }
@@ -1348,8 +1686,8 @@ pub(crate) mod tests {
                     let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     graph.insert_edge(view, alloc, node, node).unwrap();
-                    graph.remove_edge(view, node).unwrap();
-                    graph.remove_edge(view, DbId(-3)).unwrap();
+                    graph.remove_edge(view, node, discard).unwrap();
+                    graph.remove_edge(view, DbId(-3), discard).unwrap();
                     assert_eq!((graph.node_count(), graph.edge_count()), (1, 1));
                 });
             }

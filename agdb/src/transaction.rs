@@ -7,6 +7,7 @@ use crate::DbValue;
 use crate::QueryResult;
 use crate::SearchQueryAlgorithm;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::collections::key_values::KeyValues;
 use crate::collections::keys::ALIAS;
 use crate::collections::keys::KeyId;
@@ -15,29 +16,36 @@ use crate::db::db_search_handlers::LimitHandler;
 use crate::db::db_search_handlers::LimitOffsetHandler;
 use crate::db::db_search_handlers::OffsetHandler;
 use crate::db::db_search_handlers::PathHandler;
+use crate::db::id_pool::IdPool;
 use crate::db::rebuild::Element;
 use crate::db::rebuild::Source;
 use crate::graph_search::GraphSearch;
 use crate::graph_search::SearchControl;
 use crate::query::Query;
+use crate::query::QueryMut;
 use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::storage::StorageSlice;
+use crate::storage::pages::Overlay;
 use crate::storage::pages::Reader;
 use crate::storage::pages::View;
 use crate::storage::pages::Writer;
 use crate::storage::root::Meta;
+use crate::storage::root::RootMut;
+use crate::transaction_mut::Pending;
 use std::borrow::Cow;
+use std::cell::RefCell;
+use std::sync::Mutex;
+use std::sync::PoisonError;
 
 /// The pages a [`Transaction`] reads: the committed ones, those of the
 /// write transaction it runs in, or a concurrent epoch-based snapshot.
 pub(crate) enum ReadView<'a, S: StorageData> {
     Committed(Reader<'a, S>),
     Writing(&'a Writer<'a, S>),
-    /// Epoch-based concurrent snapshot (see [`ConcurrentRoot`]).
     Concurrent(&'a dyn View),
 }
 
@@ -59,13 +67,94 @@ impl<S: StorageData> View for ReadView<'_, S> {
     }
 }
 
-/// The `Transaction` is a read-only view of the database. It allows
-/// running queries via [`exec()`](#method.exec).
+/// The `Transaction` is a view of the database as of when it started. It
+/// allows running queries via [`exec()`](#method.exec) and, unless it is
+/// the view of another transaction, writing via
+/// [`exec_mut()`](#method.exec_mut) concurrently with the other
+/// transactions, see [`DbImpl::transaction`](crate::DbImpl::transaction).
 pub struct Transaction<'a, Store: StorageData> {
     view: ReadView<'a, Store>,
     meta: Cow<'a, Meta>,
     /// Why the database cannot be read, returned by every query.
     error: Option<DbError>,
+    writes: Option<&'a (dyn Writable<Store> + 'a)>,
+}
+
+pub(crate) trait Writable<Store: StorageData> {
+    fn with(&self, start: bool, f: &mut dyn FnMut(&mut TransactionMut<'_, Store>));
+}
+
+pub(crate) struct Writes<'a, Store: StorageData>(RefCell<State<'a, Store>>);
+
+// WHY: one per transaction on the stack, boxing would only add an allocation.
+#[allow(clippy::large_enum_variant)]
+enum State<'a, Store: StorageData> {
+    Idle(Start<'a>),
+    Writing(TransactionMut<'a, Store>),
+    Gone,
+}
+
+impl<'a, Store: StorageData> Writes<'a, Store> {
+    pub(crate) fn new(start: Start<'a>) -> Self {
+        Self(RefCell::new(State::Idle(start)))
+    }
+
+    pub(crate) fn into_pending<'r>(self, pool: &'r IdPool) -> Option<Pending<'r>> {
+        match self.0.into_inner() {
+            State::Writing(transaction) => Some(transaction.into_pending(pool)),
+            _ => None,
+        }
+    }
+}
+
+impl<Store: StorageData> Writable<Store> for Writes<'_, Store> {
+    fn with(&self, start: bool, f: &mut dyn FnMut(&mut TransactionMut<'_, Store>)) {
+        let mut state = self.0.borrow_mut();
+
+        if start
+            && let State::Idle(_) = &*state
+            && let State::Idle(start) = std::mem::replace(&mut *state, State::Gone)
+        {
+            (start.started)();
+            let spare = start
+                .spaces
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .pop();
+            let (overlay, meta) = start.space.insert(match spare {
+                Some((overlay, mut meta)) => {
+                    meta.copy_private(start.meta);
+                    (overlay, meta)
+                }
+                None => (
+                    Overlay::new(start.meta.layout.page_shift),
+                    start.meta.clone(),
+                ),
+            });
+            let root = RootMut::over(Writer::over(start.base, overlay), meta);
+            *state = State::Writing(TransactionMut::concurrent(
+                root,
+                start.pool,
+                start.version,
+                start.generation,
+            ));
+        }
+
+        if let State::Writing(transaction) = &mut *state {
+            f(transaction);
+        }
+    }
+}
+
+pub(crate) struct Start<'a> {
+    pub(crate) base: &'a dyn View,
+    pub(crate) meta: &'a Meta,
+    pub(crate) pool: &'a IdPool,
+    pub(crate) version: u64,
+    pub(crate) generation: u64,
+    pub(crate) space: &'a mut Option<(Overlay, Meta)>,
+    pub(crate) spaces: &'a Mutex<Vec<(Overlay, Meta)>>,
+    pub(crate) started: &'a dyn Fn(),
 }
 
 impl<'a, Store: StorageData> Transaction<'a, Store> {
@@ -81,12 +170,70 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
     /// - Select indexes
     /// - Select node count
     /// - Search
+    ///
+    /// Once the transaction wrote, the queries see its writes.
     pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         if let Some(error) = &self.error {
             return Err(error.clone());
         }
 
-        query.process(self)
+        let Some(writes) = self.writes else {
+            return query.process(self);
+        };
+
+        let mut query = Some(query);
+        let mut result = None;
+        writes.with(false, &mut |transaction| {
+            if let Some(query) = query.take() {
+                result = Some(transaction.exec(query));
+            }
+        });
+
+        match (result, query) {
+            (Some(result), _) => result,
+            (None, Some(query)) => query.process(self),
+            (None, None) => unreachable!("the query runs once"),
+        }
+    }
+
+    /// Executes mutable queries:
+    ///
+    /// - Insert nodes
+    /// - Insert edges
+    /// - Insert aliases
+    /// - Insert values
+    /// - Insert index
+    /// - Remove elements
+    /// - Remove aliases
+    /// - Remove values
+    /// - Remove index
+    ///
+    /// The writes are visible to the following queries of the transaction
+    /// only, until it commits after its closure returns `Ok`, see
+    /// [`DbImpl::transaction`](crate::DbImpl::transaction). Once a
+    /// mutable query fails the transaction can no longer run queries nor
+    /// be committed.
+    pub fn exec_mut<T: QueryMut>(&self, query: T) -> Result<QueryResult, DbError> {
+        if let Some(error) = &self.error {
+            return Err(error.clone());
+        }
+
+        let Some(writes) = &self.writes else {
+            return Err(DbError::db(
+                DbErrorType::NotAllowed,
+                "The transaction cannot write",
+            ));
+        };
+
+        let mut query = Some(query);
+        let mut result = None;
+        writes.with(true, &mut |transaction| {
+            if let Some(query) = query.take() {
+                result = Some(transaction.exec_mut(query));
+            }
+        });
+
+        result.unwrap_or_else(|| unreachable!("the writes start"))
     }
 
     pub(crate) fn new(view: ReadView<'a, Store>, meta: Cow<'a, Meta>) -> Self {
@@ -94,16 +241,23 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
             view,
             meta,
             error: None,
+            writes: None,
         }
     }
 
     /// A transaction whose queries fail with the `error`.
-    pub(crate) fn failed(reader: Reader<'a, Store>, error: DbError) -> Self {
+    pub(crate) fn failed(view: ReadView<'a, Store>, error: DbError) -> Self {
         Self {
-            view: ReadView::Committed(reader),
+            view,
             meta: Cow::Owned(Meta::default()),
             error: Some(error),
+            writes: None,
         }
+    }
+
+    pub(crate) fn writable(mut self, writes: &'a (dyn Writable<Store> + 'a)) -> Self {
+        self.writes = Some(writes);
+        self
     }
 
     fn key_values(&self) -> KeyValues<'_> {

@@ -1,9 +1,15 @@
 use super::DEFAULT_OVERLAY_LIMIT;
 use super::StorageData;
 use super::StorageSlice;
+use super::StorageSnapshot;
 use super::SyncMode;
+use super::file_snapshot::FileShared;
+use super::file_snapshot::FileSnapshot;
+use super::file_snapshot::Records;
 use super::overlay::Overlay;
+use super::page_cache::PageCache;
 use super::ranges::Ranges;
+use super::segments::Segments;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::remove_wal;
 use super::write_ahead_log::wal_filename;
@@ -32,9 +38,18 @@ type FileHandle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
 ///
 /// The changes are held in memory until [`StorageData::flush()`] unless
 /// they grow past [`StorageData::overlay_limit()`].
+///
+/// With a [`StorageData::memory_limit()`] of at least a page the reads
+/// go through a bounded LRU cache of that size, sparing the file reads
+/// of the recently used pages.
+///
+/// Its [`StorageData::snapshot()`] reads the file while it is written,
+/// see [`FileSnapshot`].
 pub struct FileStorageImpl<P: Platform> {
     platform: Arc<P>,
-    file: FileHandle<P>,
+    shared: Arc<FileShared<P>>,
+    version: u64,
+    pending: Records,
     filename: String,
     len: u64,
     sync_mode: SyncMode,
@@ -46,6 +61,7 @@ pub struct FileStorageImpl<P: Platform> {
     overlay: Overlay,
     overlay_limit: u64,
     wal_unsynced: bool,
+    memory_limit: Option<u64>,
 }
 
 struct Undo {
@@ -113,7 +129,9 @@ impl<P: Platform> FileStorageImpl<P> {
 
         Ok(Self {
             platform,
-            file,
+            shared: Arc::new(FileShared::new(file)),
+            version: 1,
+            pending: Records::default(),
             filename: name.to_string(),
             len,
             sync_mode,
@@ -125,10 +143,11 @@ impl<P: Platform> FileStorageImpl<P> {
             overlay: Overlay::default(),
             overlay_limit: DEFAULT_OVERLAY_LIMIT,
             wal_unsynced: false,
+            memory_limit: None,
         })
     }
 
-    pub(crate) fn defer_write(&mut self, pos: u64, len: u64, bytes: &[u8]) {
+    pub(crate) fn defer_write(&mut self, pos: u64, len: u64, bytes: &Segments) {
         if len == 0 {
             return;
         }
@@ -139,14 +158,17 @@ impl<P: Platform> FileStorageImpl<P> {
         self.len = self.len.max(end);
     }
 
-    pub(crate) fn defer_resize(&mut self, new_len: u64, bytes: &[u8]) {
+    pub(crate) fn defer_resize(&mut self, new_len: u64, bytes: &Segments) {
         self.stage_from(new_len.min(self.len), new_len.max(self.len), bytes);
         self.hold_len(new_len);
     }
 
-    pub(crate) fn flush_deferred(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+    pub(crate) fn flush_deferred(&mut self, bytes: &Segments) -> Result<(), DbError> {
         self.write_held(bytes)?;
-        self.commit_log()
+        self.commit_log()?;
+        self.shared.commit(self.version);
+        self.version += 1;
+        Ok(())
     }
 
     pub(crate) fn is_deferring(&self) -> bool {
@@ -156,17 +178,30 @@ impl<P: Platform> FileStorageImpl<P> {
             || self.file_len != self.len
     }
 
+    #[cfg(test)]
+    pub(crate) fn shared(&self) -> &FileShared<P> {
+        &self.shared
+    }
+
     pub(crate) fn platform(&self) -> &Arc<P> {
         &self.platform
     }
 
+    pub(crate) fn read_segments(&self) -> Result<Segments, DbError> {
+        Segments::load(self.file_len, |buffer, pos| {
+            self.shared.file.read_exact_at(buffer, pos)
+        })
+        .map_err(DbError::from)
+    }
+
+    #[cfg(test)]
     pub(crate) fn read_all(&self) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; self.file_len as usize];
-        self.file.read_exact_at(&mut buffer, 0)?;
+        self.shared.file.read_exact_at(&mut buffer, 0)?;
         Ok(buffer)
     }
 
-    pub(crate) fn spill(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+    pub(crate) fn spill(&mut self, bytes: &Segments) -> Result<(), DbError> {
         if self.overlay_limit < self.wal.staged_len() + self.overlay.size() {
             self.write_held(bytes)?;
         }
@@ -205,7 +240,7 @@ impl<P: Platform> FileStorageImpl<P> {
         }
 
         if self.sync_mode != SyncMode::None {
-            self.file.sync_data()?;
+            self.shared.file.sync_data()?;
         }
 
         self.wal_unsynced = true;
@@ -242,27 +277,25 @@ impl<P: Platform> FileStorageImpl<P> {
     }
 
     fn read_into(
-        file: &FileHandle<P>,
+        shared: &FileShared<P>,
         overlay: &Overlay,
         disk_end: u64,
         pos: u64,
         buffer: &mut [u8],
+        cached: bool,
     ) -> Result<(), DbError> {
         let from_file = disk_end.saturating_sub(pos).min(buffer.len() as u64) as usize;
-
-        if from_file != 0 {
-            file.read_exact_at(&mut buffer[..from_file], pos)?;
-        }
-
+        shared.read(pos, &mut buffer[..from_file], cached, None)?;
+        buffer[from_file..].fill(0);
         overlay.patch(pos, buffer);
         Ok(())
     }
 
-    fn stage_from(&mut self, pos: u64, end: u64, bytes: &[u8]) {
+    fn stage_from(&mut self, pos: u64, end: u64, bytes: &Segments) {
         let records = self.undo.records(pos, end, self.len);
 
         if let (Some((start, end)), _) = records {
-            self.wal.stage(start, &bytes[start as usize..end as usize]);
+            self.wal.stage(start, &bytes.read(start, end - start));
         }
 
         self.mark_logged(records);
@@ -272,17 +305,26 @@ impl<P: Platform> FileStorageImpl<P> {
         let records = self.undo.records(pos, end, self.len);
 
         if let (Some((start, end)), _) = records {
-            let (file, overlay, disk_end) = (&self.file, &self.overlay, self.disk_end());
-            self.wal.stage_with(start, end - start, &|buffer| {
-                Self::read_into(file, overlay, disk_end, start, buffer)
+            let (shared, overlay, disk_end) = (&*self.shared, &self.overlay, self.disk_end());
+
+            let old = self.wal.stage_with(start, end - start, &|buffer| {
+                Self::read_into(shared, overlay, disk_end, start, buffer, false)
             })?;
+
+            if shared.recording() {
+                self.pending.add(start, old);
+            }
         }
 
         self.mark_logged(records);
         Ok(())
     }
 
-    fn write_held(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+    fn write_held(&mut self, bytes: &Segments) -> Result<(), DbError> {
+        if !self.pending.is_empty() {
+            self.shared.publish(self.version, &mut self.pending);
+        }
+
         if self.wal.staged_len() != 0 {
             self.wal_unsynced = true;
             self.wal.write_staged()?;
@@ -295,7 +337,8 @@ impl<P: Platform> FileStorageImpl<P> {
 
         if let Some(shortest) = self.shortest {
             if shortest < self.file_len {
-                self.file.set_len(shortest)?;
+                self.shared
+                    .write(shortest, u64::MAX, |file| file.set_len(shortest))?;
                 self.file_len = shortest;
             }
 
@@ -308,9 +351,11 @@ impl<P: Platform> FileStorageImpl<P> {
             }
 
             let end = end.min(self.len);
-            let written = self
-                .file
-                .write_all_at(&bytes[start as usize..end as usize], start);
+            let written = self.shared.write(start, end, |file| {
+                bytes
+                    .chunks(start, end)
+                    .try_for_each(|(pos, chunk)| file.write_all_at(chunk, pos))
+            });
             self.file_len = self.file_len.max(end);
             written?;
         }
@@ -318,7 +363,10 @@ impl<P: Platform> FileStorageImpl<P> {
         self.dirty.clear();
 
         for (start, range) in self.overlay.iter() {
-            let written = self.file.write_all_at(&range, start);
+            let end = start + range.len() as u64;
+            let written = self
+                .shared
+                .write(start, end, |file| file.write_all_at(&range, start));
             self.file_len = self.file_len.max(start + range.len() as u64);
             written?;
         }
@@ -326,15 +374,17 @@ impl<P: Platform> FileStorageImpl<P> {
         self.overlay.clear();
 
         if self.file_len != self.len {
-            self.file.set_len(self.len)?;
-            self.file_len = self.len;
+            let len = self.len;
+            self.shared
+                .write(len.min(self.file_len), u64::MAX, |file| file.set_len(len))?;
+            self.file_len = len;
         }
 
         Ok(())
     }
 }
 
-impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
+impl<P: Platform + Default + 'static> StorageData for FileStorageImpl<P> {
     /// The file is copied through its handle, which keeps the borrow of a
     /// file open for writing, and the log of a file previously at `name`
     /// is removed so that it is not replayed onto the copy.
@@ -349,7 +399,7 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
         }
 
         remove_wal(&*self.platform, name)?;
-        fs.copy_from(&self.file, name)?;
+        fs.copy_from(&self.shared.file, name)?;
         Ok(())
     }
 
@@ -366,7 +416,7 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        self.flush_deferred(&[])
+        self.flush_deferred(&Segments::default())
     }
 
     fn set_overlay_limit(&mut self, limit: u64) {
@@ -386,7 +436,7 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn sync(&mut self) -> Result<(), DbError> {
-        Ok(self.file.sync_data()?)
+        Ok(self.shared.file.sync_data()?)
     }
 
     fn len(&self) -> u64 {
@@ -416,7 +466,14 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
         }
 
         let mut buffer = vec![0_u8; value_len as usize];
-        Self::read_into(&self.file, &self.overlay, self.disk_end(), pos, &mut buffer)?;
+        Self::read_into(
+            &self.shared,
+            &self.overlay,
+            self.disk_end(),
+            pos,
+            &mut buffer,
+            true,
+        )?;
         Ok(StorageSlice::Owned(buffer))
     }
 
@@ -437,9 +494,10 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        self.stage_read(new_len.min(self.len), new_len.max(self.len))?;
+        let (low, high) = (new_len.min(self.len), new_len.max(self.len));
+        self.stage_read(low, high)?;
         self.hold_len(new_len);
-        self.spill(&[])
+        self.spill(&Segments::default())
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
@@ -451,16 +509,46 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
         self.stage_read(pos, end)?;
         self.overlay.write(pos, bytes);
         self.len = self.len.max(end);
-        self.spill(&[])
+        self.spill(&Segments::default())
+    }
+
+    fn set_memory_limit(&mut self, limit: Option<u64>) {
+        let limit = limit.filter(|&limit| limit != 0);
+
+        if limit != self.memory_limit {
+            self.memory_limit = limit;
+            self.shared.set_cache(limit.and_then(PageCache::new));
+        }
+    }
+
+    fn memory_limit(&self) -> Option<u64> {
+        self.memory_limit
+    }
+
+    fn snapshot(&self) -> Option<StorageSnapshot> {
+        Some(StorageSnapshot::File(FileSnapshot::new(
+            &self.shared,
+            self.version - 1,
+            self.len,
+        )))
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        self.version += 1;
         self.wal.discard_staged();
-        Self::apply_wal(&self.file, &mut self.wal)?;
+        let wal = &mut self.wal;
+
+        // WHY: each write drops the cached pages it overwrites, only the rollback of a
+        // non-empty log changes the file behind the cache.
+        if !wal.is_empty() {
+            self.shared
+                .write(0, u64::MAX, |file| Self::apply_wal(file, wal))?;
+        }
+
         self.dirty.clear();
         self.overlay.clear();
         self.shortest = None;
-        self.len = self.file.seek(SeekFrom::End(0))?;
+        self.len = self.shared.file.metadata()?.len;
         self.file_len = self.len;
         self.undo = Undo::new(self.len);
         Ok(())
@@ -470,7 +558,10 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
 /// Syncs the clearing of the log so that a clean close keeps the last commit.
 impl<P: Platform> Drop for FileStorageImpl<P> {
     fn drop(&mut self) {
-        let _ = Self::apply_wal(&self.file, &mut self.wal);
+        let wal = &mut self.wal;
+        let _ = self
+            .shared
+            .write(0, u64::MAX, |file| Self::apply_wal(file, wal));
 
         if self.wal_unsynced && self.sync_mode != SyncMode::None {
             let _ = self.wal.sync();
@@ -481,6 +572,12 @@ impl<P: Platform> Drop for FileStorageImpl<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_snapshot::MAX_CACHED_READ_PAGES;
+    use crate::storage::page_cache::CACHE_PAGE_SIZE;
+
+    fn seg(bytes: &[u8]) -> Segments {
+        Segments::from(bytes)
+    }
     use crate::storage::overlay::RUN_OVERHEAD;
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_fs::FsOp;
@@ -531,6 +628,24 @@ mod tests {
         storage.write(0, &[1, 2, 3]).unwrap();
         storage.flush().unwrap();
         storage
+    }
+
+    const PAGE: usize = CACHE_PAGE_SIZE as usize;
+
+    fn cached(platform: &Arc<TestPlatform>) -> TestFileStorage {
+        let mut storage = open(platform);
+        storage
+            .write(0, &[[1; PAGE], [2; PAGE], [3; PAGE]].concat())
+            .unwrap();
+        storage.flush().unwrap();
+        storage.set_memory_limit(Some(2 * CACHE_PAGE_SIZE));
+        storage
+    }
+
+    fn fail_reads(platform: &Arc<TestPlatform>) {
+        platform
+            .fs()
+            .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
     }
 
     mod file_storage_impl {
@@ -682,7 +797,7 @@ mod tests {
                 let mut storage = written(&platform);
 
                 // WHEN deferring a write over and past them
-                storage.defer_write(2, 3, &[1, 2, 9]);
+                storage.defer_write(2, 3, &seg(&[1, 2, 9]));
 
                 // THEN the file is not written
                 assert_eq!(storage.len(), 5);
@@ -691,7 +806,7 @@ mod tests {
                 platform
                     .fs()
                     .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
-                assert!(storage.flush_deferred(&[1, 2, 4, 5, 6]).is_err());
+                assert!(storage.flush_deferred(&seg(&[1, 2, 4, 5, 6])).is_err());
                 platform.fs().clear_faults();
                 storage.recover_from_wal().unwrap();
                 assert_eq!(read(&storage), vec![1, 2, 9]);
@@ -702,7 +817,7 @@ mod tests {
                 let platform = platform();
                 let mut storage = written(&platform);
 
-                storage.defer_write(5, 0, &[1, 2, 3]);
+                storage.defer_write(5, 0, &seg(&[1, 2, 3]));
 
                 assert!(!storage.is_deferring());
                 assert_eq!(storage.len(), 3);
@@ -717,14 +832,14 @@ mod tests {
                 let platform = platform();
                 let mut storage = written(&platform);
 
-                storage.defer_resize(1, &[1, 9, 9]);
+                storage.defer_resize(1, &seg(&[1, 9, 9]));
 
                 assert_eq!(storage.len(), 1);
                 assert_eq!(read(&storage), vec![1, 2, 3]);
                 platform
                     .fs()
                     .set_io_error(FsOp::SetLen, NAME, ErrorKind::Other);
-                assert!(storage.flush_deferred(&[1]).is_err());
+                assert!(storage.flush_deferred(&seg(&[1])).is_err());
                 platform.fs().clear_faults();
                 storage.recover_from_wal().unwrap();
                 assert_eq!(read(&storage), vec![1, 9, 9]);
@@ -735,7 +850,7 @@ mod tests {
                 let platform = platform();
                 let mut storage = written(&platform);
 
-                storage.defer_resize(3, &[1, 2, 3]);
+                storage.defer_resize(3, &seg(&[1, 2, 3]));
 
                 assert!(!storage.is_deferring());
             }
@@ -749,13 +864,13 @@ mod tests {
                 // GIVEN deferred writes and a shrink then growth past the file length
                 let platform = platform();
                 let mut storage = written(&platform);
-                storage.defer_write(0, 1, &[1, 2, 3]);
-                storage.defer_resize(1, &[7, 2, 3]);
-                storage.defer_resize(4, &[7]);
-                storage.defer_write(5, 1, &[7, 0, 0, 0]);
+                storage.defer_write(0, 1, &seg(&[1, 2, 3]));
+                storage.defer_resize(1, &seg(&[7, 2, 3]));
+                storage.defer_resize(4, &seg(&[7]));
+                storage.defer_write(5, 1, &seg(&[7, 0, 0, 0]));
 
                 // WHEN flushing them with bytes differing also outside the changed ranges
-                storage.flush_deferred(&[7, 8, 8, 8, 8, 9]).unwrap();
+                storage.flush_deferred(&seg(&[7, 8, 8, 8, 8, 9])).unwrap();
 
                 // THEN only the changed ranges are written, the rest is zeroed by the resizes
                 assert_eq!(read(&storage), vec![7, 0, 0, 0, 0, 9]);
@@ -767,10 +882,10 @@ mod tests {
             fn flush_deferred_should_not_write_ranges_cut_off_by_shrink() {
                 let platform = platform();
                 let mut storage = written(&platform);
-                storage.defer_write(2, 4, &[1, 2, 3]);
-                storage.defer_resize(1, &[1, 2, 4, 4, 4, 4]);
+                storage.defer_write(2, 4, &seg(&[1, 2, 3]));
+                storage.defer_resize(1, &seg(&[1, 2, 4, 4, 4, 4]));
 
-                storage.flush_deferred(&[1]).unwrap();
+                storage.flush_deferred(&seg(&[1])).unwrap();
 
                 assert_eq!(read(&storage), vec![1]);
             }
@@ -784,19 +899,19 @@ mod tests {
                 ] {
                     let platform = platform();
                     let mut storage = written(&platform);
-                    storage.defer_write(5, 1, &[1, 2, 3]);
-                    storage.defer_resize(1, &[1, 2, 3, 0, 0, 1]);
-                    storage.defer_write(0, 1, &[1]);
+                    storage.defer_write(5, 1, &seg(&[1, 2, 3]));
+                    storage.defer_resize(1, &seg(&[1, 2, 3, 0, 0, 1]));
+                    storage.defer_write(0, 1, &seg(&[1]));
                     platform.fs().set_io_error(op, path, ErrorKind::Other);
 
                     assert!(
-                        storage.flush_deferred(&[4]).is_err(),
+                        storage.flush_deferred(&seg(&[4])).is_err(),
                         "op: {op:?}, path: {path}"
                     );
 
                     assert!(storage.is_deferring(), "op: {op:?}, path: {path}");
                     platform.fs().clear_faults();
-                    storage.flush_deferred(&[4]).unwrap();
+                    storage.flush_deferred(&seg(&[4])).unwrap();
                     assert_eq!(read(&storage), vec![4], "op: {op:?}, path: {path}");
                 }
             }
@@ -808,9 +923,9 @@ mod tests {
             #[test]
             fn is_deferring_should_be_true_until_flush_deferred() {
                 for defer in [
-                    |storage: &mut TestFileStorage| storage.defer_write(0, 1, &[1, 2, 3]),
-                    |storage: &mut TestFileStorage| storage.defer_resize(5, &[1, 2, 3]),
-                    |storage: &mut TestFileStorage| storage.defer_resize(1, &[1, 2, 3]),
+                    |storage: &mut TestFileStorage| storage.defer_write(0, 1, &seg(&[1, 2, 3])),
+                    |storage: &mut TestFileStorage| storage.defer_resize(5, &seg(&[1, 2, 3])),
+                    |storage: &mut TestFileStorage| storage.defer_resize(1, &seg(&[1, 2, 3])),
                     |storage: &mut TestFileStorage| storage.write(0, &[1]).unwrap(),
                 ] {
                     let platform = platform();
@@ -821,7 +936,7 @@ mod tests {
 
                     assert!(storage.is_deferring());
                     let bytes = vec![1; storage.len() as usize];
-                    storage.flush_deferred(&bytes).unwrap();
+                    storage.flush_deferred(&seg(&bytes)).unwrap();
                     assert!(!storage.is_deferring());
                 }
             }
@@ -866,6 +981,33 @@ mod tests {
             }
         }
 
+        mod read_segments {
+            use super::*;
+
+            #[test]
+            fn read_segments_should_return_bytes_of_file_without_held_changes() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(1, &[1, 2]).unwrap();
+                storage.flush().unwrap();
+
+                storage.write(0, &[3]).unwrap();
+
+                assert_eq!(storage.read_segments().unwrap().to_vec(), vec![0, 1, 2]);
+            }
+
+            #[test]
+            fn read_segments_failure_should_fail() {
+                let platform = platform();
+                let storage = written(&platform);
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                assert!(storage.read_segments().is_err());
+            }
+        }
+
         mod spill {
             use super::*;
 
@@ -879,7 +1021,7 @@ mod tests {
                 storage.set_overlay_limit(0);
 
                 // WHEN spilling them
-                storage.spill(&[]).unwrap();
+                storage.spill(&seg(&[])).unwrap();
 
                 // THEN they are in the file
                 assert!(!storage.is_deferring());
@@ -895,7 +1037,7 @@ mod tests {
                 let mut storage = written(&platform);
                 storage.write(1, &[4, 5]).unwrap();
 
-                storage.spill(&[]).unwrap();
+                storage.spill(&seg(&[])).unwrap();
 
                 assert!(storage.is_deferring());
                 assert_eq!(read(&storage), vec![1, 2, 3]);
@@ -937,7 +1079,7 @@ mod tests {
                     platform.fs().set_io_error(op, path, ErrorKind::Other);
 
                     assert!(
-                        storage.spill(&[]).is_err(),
+                        storage.spill(&seg(&[])).is_err(),
                         "mode: {mode}, op: {op:?}, path: {path}"
                     );
 
@@ -1232,6 +1374,62 @@ mod tests {
                 }
             }
 
+            mod check_len {
+                use super::*;
+
+                #[test]
+                fn check_len_should_fail_past_memory_limit_if_bounded() {
+                    crate::storage::tests::storage_data::check_len::check_len_should_fail_past_memory_limit_if_bounded(
+                        open(&platform()), false,
+                    );
+                }
+            }
+
+            mod set_memory_limit {
+                use super::*;
+
+                #[test]
+                fn set_memory_limit_same_should_keep_cached_pages() {
+                    let platform = platform();
+                    let mut storage = cached(&platform);
+                    storage.read(0, 1).unwrap();
+                    fail_reads(&platform);
+
+                    storage.set_memory_limit(Some(2 * CACHE_PAGE_SIZE));
+
+                    assert_eq!(storage.read(0, 1).unwrap().to_vec(), vec![1]);
+                }
+
+                #[test]
+                fn set_memory_limit_below_page_should_not_cache() {
+                    let platform = platform();
+                    let mut storage = cached(&platform);
+
+                    storage.set_memory_limit(Some(CACHE_PAGE_SIZE - 1));
+
+                    assert!(!storage.shared.has_cache());
+                    assert_eq!(storage.memory_limit(), Some(CACHE_PAGE_SIZE - 1));
+                }
+
+                #[test]
+                fn set_memory_limit_should_set_limit_with_zero_as_none() {
+                    crate::storage::tests::storage_data::set_memory_limit::set_memory_limit_should_set_limit_with_zero_as_none(
+                        open(&platform()),
+                    );
+                }
+            }
+
+            mod memory_limit {
+                use super::*;
+
+                #[test]
+                fn memory_limit_should_default_to_none() {
+                    crate::storage::tests::storage_data::memory_limit::memory_limit_should_default_to_none(
+                        open(&platform()),
+                    );
+                }
+            }
+
             mod set_overlay_limit {
                 use super::*;
 
@@ -1345,6 +1543,96 @@ mod tests {
 
             mod read {
                 use super::*;
+
+                #[test]
+                fn read_cached_should_not_read_file_again() {
+                    let platform = platform();
+                    let storage = cached(&platform);
+                    storage.read(1, 2).unwrap();
+                    fail_reads(&platform);
+
+                    let bytes = storage.read(PAGE as u64 - 2, 2).unwrap();
+
+                    assert_eq!(bytes.to_vec(), vec![1, 1]);
+                    assert!(storage.read(2 * PAGE as u64, 1).is_err());
+                }
+
+                #[test]
+                fn read_cached_across_pages_should_return_bytes_of_each() {
+                    let platform = platform();
+                    let storage = cached(&platform);
+
+                    let bytes = storage.read(PAGE as u64 - 1, PAGE as u64 + 2).unwrap();
+
+                    assert_eq!(bytes.len(), PAGE + 2);
+                    assert_eq!((bytes[0], bytes[1], bytes[PAGE + 1]), (1, 2, 3));
+                }
+
+                #[test]
+                fn read_cached_should_evict_least_recently_used_page() {
+                    let platform = platform();
+                    let storage = cached(&platform);
+                    storage.read(0, 1).unwrap();
+                    storage.read(PAGE as u64, 1).unwrap();
+                    storage.read(0, 1).unwrap();
+                    storage.read(2 * PAGE as u64, 1).unwrap();
+                    fail_reads(&platform);
+
+                    assert_eq!(storage.read(0, 1).unwrap().to_vec(), vec![1]);
+                    assert_eq!(storage.read(2 * PAGE as u64, 1).unwrap().to_vec(), vec![3]);
+                    assert!(storage.read(PAGE as u64, 1).is_err());
+                }
+
+                #[test]
+                fn read_cached_should_return_bytes_written_after_caching() {
+                    let platform = platform();
+                    let mut storage = cached(&platform);
+                    storage.read(0, 3).unwrap();
+
+                    storage.write(1, &[7]).unwrap();
+                    storage.flush().unwrap();
+
+                    assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 7, 1]);
+                }
+
+                #[test]
+                fn read_cached_failure_should_fail_without_caching() {
+                    let platform = platform();
+                    let storage = cached(&platform);
+                    fail_reads(&platform);
+
+                    let failed = storage.read(0, 1);
+                    platform.fs().clear_faults();
+
+                    assert!(failed.is_err());
+                    assert_eq!(storage.read(0, 1).unwrap().to_vec(), vec![1]);
+                }
+
+                #[test]
+                fn read_cached_poisoned_should_clear_cache() {
+                    let platform = platform();
+                    let storage = cached(&platform);
+                    storage.read(0, 1).unwrap();
+                    storage.shared.poison();
+                    fail_reads(&platform);
+
+                    assert!(storage.read(0, 1).is_err());
+                    assert!(!storage.shared.is_poisoned());
+                }
+
+                #[test]
+                fn read_longer_than_cached_read_should_read_file() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    let len = (MAX_CACHED_READ_PAGES + 1) * CACHE_PAGE_SIZE;
+                    storage.resize(len).unwrap();
+                    storage.flush().unwrap();
+                    storage.set_memory_limit(Some(len));
+                    storage.read(0, len).unwrap();
+                    fail_reads(&platform);
+
+                    assert!(storage.read(0, 1).is_err());
+                }
 
                 #[test]
                 fn read_should_return_bytes_at_pos() {
@@ -1498,6 +1786,18 @@ mod tests {
                 use super::*;
 
                 #[test]
+                fn resize_cached_shrunk_and_grown_should_zero_dropped_bytes() {
+                    let platform = platform();
+                    let mut storage = cached(&platform);
+                    storage.read(PAGE as u64, 2).unwrap();
+
+                    storage.resize(PAGE as u64 + 1).unwrap();
+                    storage.resize(PAGE as u64 + 2).unwrap();
+
+                    assert_eq!(storage.read(PAGE as u64, 2).unwrap().to_vec(), vec![2, 0]);
+                }
+
+                #[test]
                 fn resize_should_zero_new_bytes_and_cut_off_others() {
                     crate::storage::tests::storage_data::resize::resize_should_zero_new_bytes_and_cut_off_others(open(
                         &platform(),
@@ -1590,6 +1890,13 @@ mod tests {
                     assert_eq!(storage.wal.staged_len(), logged);
                     storage.recover_from_wal().unwrap();
                     assert_eq!(read(&storage), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn resize_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::resize::resize_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), false,
+                    );
                 }
             }
 
@@ -1743,10 +2050,30 @@ mod tests {
                     assert!(!storage.is_deferring());
                     assert_eq!(storage.wal.staged_len(), 0);
                 }
+
+                #[test]
+                fn write_past_memory_limit_should_fail_if_bounded() {
+                    crate::storage::tests::storage_data::write::write_past_memory_limit_should_fail_if_bounded(
+                        open(&platform()), false,
+                    );
+                }
             }
 
             mod recover_from_wal {
                 use super::*;
+
+                #[test]
+                fn recover_from_wal_should_drop_cached_unflushed_bytes() {
+                    let platform = platform();
+                    let mut storage = cached(&platform);
+                    storage.set_overlay_limit(0);
+                    storage.write(0, &[9]).unwrap();
+                    storage.read(0, 1).unwrap();
+
+                    storage.recover_from_wal().unwrap();
+
+                    assert_eq!(storage.read(0, 1).unwrap().to_vec(), vec![1]);
+                }
 
                 #[test]
                 fn recover_from_wal_should_restore_flushed_bytes_after_random_changes() {
@@ -1792,7 +2119,7 @@ mod tests {
 
                 #[test]
                 fn recover_from_wal_failure_should_fail() {
-                    for (op, path) in [(FsOp::Read, WAL), (FsOp::Seek, NAME)] {
+                    for (op, path) in [(FsOp::Read, WAL), (FsOp::Metadata, NAME)] {
                         let platform = platform();
                         let mut storage = spilling(&platform);
                         storage.write(0, &[1]).unwrap();

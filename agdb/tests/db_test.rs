@@ -25,6 +25,9 @@ use agdb::SearchQuery;
 use agdb::StorageData;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::thread;
 use std::time::Instant;
 use test_db::TestDb;
 use test_db::test_file::TestFile;
@@ -384,7 +387,7 @@ fn memory_backup() {
 fn filename() {
     let test_file = TestFile::new();
     let db = Db::new(test_file.file_name()).unwrap();
-    assert_eq!(db.filename(), test_file.file_name());
+    assert_eq!(&db.filename(), test_file.file_name());
 }
 
 #[test]
@@ -426,7 +429,7 @@ fn rename_mapped() {
     let test_file2 = TestFile::new();
     let db = Db::new(test_file.file_name()).unwrap();
     db.rename(test_file2.file_name()).unwrap();
-    assert_eq!(db.filename(), test_file2.file_name());
+    assert_eq!(&db.filename(), test_file2.file_name());
 }
 
 #[test]
@@ -478,7 +481,7 @@ fn copy_mapped() {
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
-    assert_eq!(other.filename(), test_file2.file_name());
+    assert_eq!(&other.filename(), test_file2.file_name());
     assert_eq!(
         other
             .exec(QueryBuilder::select().ids("root").query())
@@ -496,7 +499,7 @@ fn copy_file() {
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
-    assert_eq!(other.filename(), test_file2.file_name());
+    assert_eq!(&other.filename(), test_file2.file_name());
     assert_eq!(
         other
             .exec(QueryBuilder::select().ids("root").query())
@@ -770,7 +773,7 @@ fn db_any() {
         DbAny::new_memory("memdb").unwrap(),
     ];
 
-    let names = dbs.iter().map(|db| db.filename()).collect::<Vec<&str>>();
+    let names = dbs.iter().map(|db| db.filename()).collect::<Vec<String>>();
 
     assert_eq!(
         names,
@@ -788,7 +791,7 @@ fn db_any_struct() {
     let db = DbAny::new(test_file.file_name()).unwrap();
     let mut my_db = MyDb { db };
 
-    assert_eq!(my_db.db.filename(), test_file.file_name());
+    assert_eq!(&my_db.db.filename(), test_file.file_name());
 
     my_db = MyDb {
         db: DbAny::new_memory("memdb").unwrap(),
@@ -885,6 +888,7 @@ fn file_db_storage_config() -> Result<(), agdb::DbError> {
     let config = agdb::StorageConfig {
         sync_mode: agdb::SyncMode::Strict,
         overlay_limit: 0,
+        memory_limit: None,
     };
 
     db.set_storage_config(config);
@@ -918,4 +922,281 @@ fn file_db_sync() -> Result<(), agdb::DbError> {
     );
 
     Ok(())
+}
+
+fn memory_limited(limit: u64) -> agdb::StorageConfig {
+    agdb::StorageConfig {
+        memory_limit: Some(limit),
+        ..Default::default()
+    }
+}
+
+fn insert_until_failure<Store: StorageData>(db: &agdb::DbImpl<Store>) -> (agdb::DbError, u64) {
+    let value = vec![7_u8; 1024];
+
+    for inserted in 0.. {
+        if let Err(error) = db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .values([[("v", value.clone()).into()]])
+                .query(),
+        ) {
+            return (error, inserted);
+        }
+    }
+
+    unreachable!()
+}
+
+fn node_count<Store: StorageData>(db: &agdb::DbImpl<Store>) -> u64 {
+    db.exec(QueryBuilder::select().node_count().query())
+        .unwrap()
+        .result
+}
+
+#[test]
+fn memory_db_memory_limit_should_fail_growing_transaction_keeping_data() {
+    let db = DbMemory::new("memory_db_memory_limit").unwrap();
+    let limit = db.size() + 64 * 1024;
+    db.set_storage_config(memory_limited(limit));
+
+    let (error, inserted) = insert_until_failure(&db);
+
+    assert_eq!(error.ty, agdb::DbErrorType::NotAllowed);
+    assert!(inserted > 10);
+    assert!(db.size() <= limit);
+    assert_eq!(node_count(&db), inserted);
+    assert_eq!(
+        db.exec(QueryBuilder::select().ids(1).query())
+            .unwrap()
+            .elements[0]
+            .values,
+        vec![("v", vec![7_u8; 1024]).into()]
+    );
+    db.set_storage_config(memory_limited(0));
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
+        .unwrap();
+    assert_eq!(node_count(&db), inserted + 1);
+}
+
+#[test]
+fn mapped_db_memory_limit_should_fail_growing_transaction_keeping_data() {
+    let test_file = TestFile::new();
+    let inserted = {
+        let db = Db::new(test_file.file_name()).unwrap();
+        let limit = db.size() + 64 * 1024;
+        db.set_storage_config(memory_limited(limit));
+
+        let (error, inserted) = insert_until_failure(&db);
+        let (again, _) = insert_until_failure(&db);
+
+        assert_eq!(error.ty, agdb::DbErrorType::NotAllowed);
+        assert_eq!(again.ty, agdb::DbErrorType::NotAllowed);
+        assert_eq!(db.storage_config().memory_limit, Some(limit));
+        assert_eq!(node_count(&db), inserted);
+        inserted
+    };
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    assert_eq!(node_count(&db), inserted);
+}
+
+#[test]
+fn file_db_memory_limit_should_cache_reads() {
+    let test_file = TestFile::new();
+    let value = vec![7_u8; 1024];
+    {
+        let db = DbFile::new(test_file.file_name()).unwrap();
+        db.set_storage_config(memory_limited(16 * 4096));
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .count(100)
+                .values_uniform([("v", value.clone()).into()])
+                .query(),
+        )
+        .unwrap();
+        db.exec(QueryBuilder::select().ids(1).query()).unwrap();
+        db.transaction_mut(|t| -> Result<(), agdb::DbError> {
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .values_uniform([("v", 1).into()])
+                    .ids(1)
+                    .query(),
+            )?;
+            t.exec_mut(QueryBuilder::insert().nodes().count(100).query())?;
+            Err(agdb::DbError::db(agdb::DbErrorType::NotAllowed, "rollback"))
+        })
+        .unwrap_err();
+
+        assert_eq!(node_count(&db), 100);
+        assert_eq!(
+            db.exec(QueryBuilder::select().ids(1).query())
+                .unwrap()
+                .elements[0]
+                .values,
+            vec![("v", value.clone()).into()]
+        );
+        db.exec_mut(
+            QueryBuilder::remove()
+                .ids((51..=100).collect::<Vec<i64>>())
+                .query(),
+        )
+        .unwrap();
+        db.optimize_storage().unwrap();
+        assert_eq!(db.storage_config().memory_limit, Some(16 * 4096));
+        assert_eq!(node_count(&db), 50);
+    }
+
+    let db = DbFile::new(test_file.file_name()).unwrap();
+    assert_eq!(node_count(&db), 50);
+    assert_eq!(
+        db.exec(QueryBuilder::select().ids(50).query())
+            .unwrap()
+            .elements[0]
+            .values,
+        vec![("v", value).into()]
+    );
+}
+
+#[test]
+fn file_db_cached_readers_should_see_committed_values() {
+    let test_file = TestFile::new();
+    let db = Arc::new(DbFile::new(test_file.file_name()).unwrap());
+    db.set_storage_config(agdb::StorageConfig {
+        memory_limit: Some(8 * 4096),
+        ..Default::default()
+    });
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(200)
+            .values_uniform([("v", vec![0_u8; 512]).into()])
+            .query(),
+    )
+    .unwrap();
+    let done = Arc::new(AtomicBool::new(false));
+
+    let readers: Vec<_> = (0..4)
+        .map(|r| {
+            let db = db.clone();
+            let done = done.clone();
+            thread::spawn(move || {
+                let mut id = r;
+                while !done.load(Ordering::Acquire) {
+                    id = id % 200 + 1;
+                    let result = db.exec(QueryBuilder::select().ids(id).query()).unwrap();
+                    let DbValue::Bytes(bytes) = &result.elements[0].values[0].value else {
+                        panic!("not bytes");
+                    };
+                    assert!(bytes.iter().all(|&byte| byte == bytes[0]));
+                }
+            })
+        })
+        .collect();
+
+    for i in 1..=50_u8 {
+        db.exec_mut(
+            QueryBuilder::insert()
+                .values_uniform([("v", vec![i; 512]).into()])
+                .ids((1..=200).collect::<Vec<i64>>())
+                .query(),
+        )
+        .unwrap();
+    }
+
+    done.store(true, Ordering::Release);
+
+    for r in readers {
+        r.join().unwrap();
+    }
+
+    let values = db.exec(QueryBuilder::select().ids(200).query()).unwrap();
+    assert_eq!(values.elements[0].values[0].value, vec![50_u8; 512].into());
+}
+
+fn copy_and_backup_during_writes<Store: StorageData + Send + Sync>(
+    db: agdb::DbImpl<Store>,
+    name: &str,
+) {
+    let done = AtomicBool::new(false);
+
+    thread::scope(|scope| {
+        let writer = scope.spawn(|| {
+            while !done.load(Ordering::Acquire) {
+                db.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .count(10)
+                        .values_uniform([("v", vec![1_u8; 256]).into()])
+                        .query(),
+                )
+                .unwrap();
+            }
+        });
+
+        struct Done<'a>(&'a AtomicBool);
+
+        impl Drop for Done<'_> {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+
+        let _done = Done(&done);
+
+        for _ in 0..20 {
+            let test_file = TestFile::from(format!("./{name}_copy.testfile"));
+            let copy = db.copy(test_file.file_name()).unwrap();
+            assert_eq!(node_count(&copy) % 10, 0);
+            drop(copy);
+
+            let test_file = TestFile::from(format!("./{name}_backup.testfile"));
+            db.backup(test_file.file_name()).unwrap();
+            let backup = agdb::DbImpl::<Store>::new(test_file.file_name()).unwrap();
+            assert_eq!(node_count(&backup) % 10, 0);
+        }
+
+        drop(_done);
+        writer.join().unwrap();
+    });
+}
+
+#[test]
+fn memory_db_copy_and_backup_during_writes_should_hold_whole_transactions() {
+    copy_and_backup_during_writes(DbMemory::new("memdb").unwrap(), "memory_during_writes");
+}
+
+#[test]
+fn mapped_db_copy_and_backup_during_writes_should_hold_whole_transactions() {
+    let test_file = TestFile::new();
+    copy_and_backup_during_writes(
+        Db::new(test_file.file_name()).unwrap(),
+        "mapped_during_writes",
+    );
+}
+
+#[test]
+fn file_db_copy_and_backup_during_writes_should_hold_whole_transactions() {
+    let test_file = TestFile::new();
+    copy_and_backup_during_writes(
+        DbFile::new(test_file.file_name()).unwrap(),
+        "file_during_writes",
+    );
+}
+
+#[test]
+fn size_and_storage_config_in_transaction_mut_should_be_of_last_commit() {
+    let db = DbMemory::new("memdb").unwrap();
+    let size = db.size();
+
+    db.transaction_mut(|t| -> Result<(), agdb::DbError> {
+        t.exec_mut(QueryBuilder::insert().nodes().count(100).query())?;
+        assert_eq!(db.size(), size);
+        assert_eq!(db.storage_config(), agdb::StorageConfig::default());
+        Ok(())
+    })
+    .unwrap();
+
+    assert!(db.size() > size);
 }

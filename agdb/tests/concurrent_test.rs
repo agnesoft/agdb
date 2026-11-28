@@ -3,10 +3,13 @@
 //! multiple threads and assert snapshot isolation, writer serialization,
 //! version-store trimming, resize safety, and transaction atomicity.
 
-use agdb::{DbError, DbErrorType, DbMemory, DbValue, QueryBuilder};
+mod test_db;
+
+use agdb::{DbError, DbErrorType, DbFile, DbMemory, DbValue, QueryBuilder, StorageConfig};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Barrier};
 use std::thread;
+use test_db::TestFile;
 
 /// Force the storage buffer to grow well beyond what any test needs.
 /// This prevents deadlocks where a writer spin-waits for
@@ -938,4 +941,164 @@ fn restore_should_be_visible_to_new_readers() {
     assert_eq!(get_node_count(&db), 15);
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn file_snapshot_reader_sees_pre_commit_values() {
+    let test_file = TestFile::new();
+    let db = Arc::new(DbFile::new(test_file.file_name()).unwrap());
+    db.set_storage_config(StorageConfig {
+        overlay_limit: 0,
+        memory_limit: Some(1024 * 1024),
+        ..db.storage_config()
+    });
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("target")
+            .values([[("key", "original").into()]])
+            .query(),
+    )
+    .unwrap();
+    let reader_started = Arc::new(Barrier::new(2));
+    let writer_committed = Arc::new(Barrier::new(2));
+    let (db_r, rs, wc) = (db.clone(), reader_started.clone(), writer_committed.clone());
+
+    let reader = thread::spawn(move || {
+        db_r.transaction(|t| -> Result<(DbValue, u64), DbError> {
+            rs.wait();
+            wc.wait();
+            let value = t.exec(QueryBuilder::select().values("key").ids("target").query())?;
+            let count = t.exec(QueryBuilder::select().node_count().query())?.result;
+            Ok((value.elements[0].values[0].value.clone(), count))
+        })
+        .unwrap()
+    });
+    reader_started.wait();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([[("key", "x".repeat(10_000)).into()]])
+            .ids("target")
+            .query(),
+    )
+    .unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().count(100).query())
+        .unwrap();
+    writer_committed.wait();
+
+    assert_eq!(reader.join().unwrap(), ("original".into(), 1));
+    assert_eq!(
+        db.exec(QueryBuilder::select().values("key").ids("target").query())
+            .unwrap()
+            .elements[0]
+            .values[0]
+            .value,
+        "x".repeat(10_000).into()
+    );
+}
+
+#[test]
+fn file_nested_read_during_optimize_should_not_deadlock() {
+    let test_file = TestFile::new();
+    let db = Arc::new(DbFile::new(test_file.file_name()).unwrap());
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("n").query())
+        .unwrap();
+    let reading = Arc::new(Barrier::new(2));
+    let (db_r, reading_r) = (db.clone(), reading.clone());
+
+    let reader = thread::spawn(move || {
+        db_r.transaction(|_| -> Result<u64, DbError> {
+            reading_r.wait();
+            thread::sleep(std::time::Duration::from_millis(50));
+            db_r.transaction(|t| -> Result<u64, DbError> {
+                Ok(t.exec(QueryBuilder::select().ids("n").query())?.result)
+            })
+        })
+    });
+    reading.wait();
+
+    db.optimize_storage().unwrap();
+
+    assert_eq!(reader.join().unwrap(), Ok(1));
+    assert_eq!(
+        db.exec(QueryBuilder::select().ids("n").query())
+            .unwrap()
+            .result,
+        1
+    );
+}
+
+#[test]
+fn file_concurrent_transactions_read_consistency() {
+    let test_file = TestFile::new();
+    let db = Arc::new(DbFile::new(test_file.file_name()).unwrap());
+    db.set_storage_config(StorageConfig {
+        overlay_limit: 4096,
+        memory_limit: Some(64 * 1024),
+        ..db.storage_config()
+    });
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    let running = Arc::new(AtomicBool::new(true));
+
+    let readers: Vec<_> = (0..3)
+        .map(|_| {
+            let (db, running) = (db.clone(), running.clone());
+            thread::spawn(move || {
+                let mut checks = 0_u64;
+
+                while running.load(Ordering::Relaxed) || checks == 0 {
+                    db.transaction(|t| -> Result<(), DbError> {
+                        let count = t.exec(QueryBuilder::select().node_count().query())?.result;
+                        let search = t.exec(
+                            QueryBuilder::select()
+                                .search()
+                                .from("root")
+                                .where_()
+                                .node()
+                                .query(),
+                        )?;
+                        assert_eq!(search.elements.len() as u64, count);
+
+                        for element in &search.elements[1..] {
+                            assert_eq!(element.values.len(), 2, "{element:?}");
+                        }
+
+                        Ok(())
+                    })
+                    .unwrap();
+                    checks += 1;
+                }
+            })
+        })
+        .collect();
+
+    for i in 0..200_i64 {
+        db.transaction_mut(|t| -> Result<(), DbError> {
+            let id = t
+                .exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .values([[("n", i).into(), ("blob", vec![i as u8; 600]).into()]])
+                        .query(),
+                )?
+                .ids();
+            t.exec_mut(QueryBuilder::insert().edges().from("root").to(id).query())?;
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    running.store(false, Ordering::Relaxed);
+
+    for reader in readers {
+        reader.join().unwrap();
+    }
+
+    assert_eq!(
+        db.exec(QueryBuilder::select().node_count().query())
+            .unwrap()
+            .result,
+        201
+    );
 }

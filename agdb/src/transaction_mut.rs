@@ -7,15 +7,24 @@ use crate::DbKeyValue;
 use crate::DbValue;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::SyncMode;
 use crate::Transaction;
 use crate::collections::key_values::KeyValues;
 use crate::collections::keys::ALIAS;
+use crate::db::id_pool::IdPool;
+use crate::db::id_pool::Reserved;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::query::query_id::QueryId;
+use crate::storage::pages::Overlay;
+use crate::storage::root::Meta;
 use crate::storage::root::RootMut;
 use crate::transaction::ReadView;
 use std::borrow::Cow;
+
+mod log;
+
+pub(crate) use log::Action;
 
 /// The `TransactionMut` is a write transaction over the database. It
 /// allows running queries via [`exec()`](#method.exec) and
@@ -24,6 +33,117 @@ use std::borrow::Cow;
 pub struct TransactionMut<'a, Store: StorageData> {
     root: RootMut<'a, Store>,
     failed: Option<DbError>,
+    ids: Option<Ids<'a>>,
+    log: Option<Vec<Action>>,
+}
+
+pub(crate) struct Ids<'a> {
+    pool: &'a IdPool,
+    state: IdState,
+}
+
+#[derive(Debug, Default)]
+struct IdState {
+    version: u64,
+    generation: u64,
+    // WHY: only an exclusive transaction can reuse the ids it freed.
+    reuse: bool,
+    taken: [Vec<Reserved>; 2],
+    spare: [Vec<Reserved>; 2],
+    freed: [Vec<u64>; 2],
+    removed: Vec<DbId>,
+    committed: Option<u64>,
+}
+
+impl<'a> Ids<'a> {
+    pub(crate) fn version(&self) -> u64 {
+        self.state.version
+    }
+
+    pub(crate) fn generation(&self) -> u64 {
+        self.state.generation
+    }
+
+    fn new(pool: &'a IdPool, version: u64, generation: u64, reuse: bool) -> Self {
+        Self {
+            pool,
+            state: IdState {
+                version,
+                generation,
+                reuse,
+                ..IdState::default()
+            },
+        }
+    }
+
+    fn freeing<'b>(ids: &'b mut Option<Self>) -> impl FnMut(DbId) + 'b {
+        move |id| {
+            if let Some(ids) = ids {
+                ids.state.freed[usize::from(id.0 < 0)].push(id.0.unsigned_abs());
+                ids.state.removed.push(id);
+            }
+        }
+    }
+
+    fn take(
+        &mut self,
+        edges: bool,
+        next_free: impl FnMut(u64) -> Result<u64, DbError>,
+    ) -> Result<u64, DbError> {
+        let kind = usize::from(edges);
+        let state = &mut self.state;
+
+        if state.reuse
+            && let Some(slot) = state.freed[kind].pop()
+        {
+            return Ok(slot);
+        }
+
+        if state.spare[kind].is_empty() {
+            // WHY: batches grow with the slots taken so a transaction inserting
+            // many elements locks the pool seldom.
+            let count = state.taken[kind].len().clamp(1, MAX_RESERVED);
+            self.pool.reserve(
+                edges,
+                (state.version, state.generation),
+                count,
+                next_free,
+                &mut state.spare[kind],
+            )?;
+        }
+
+        let reserved = state.spare[kind].pop().expect("reserved a slot");
+        state.taken[kind].push(reserved);
+        Ok(reserved.0)
+    }
+}
+
+const MAX_RESERVED: usize = 64;
+
+impl Drop for Ids<'_> {
+    fn drop(&mut self) {
+        let state = &mut self.state;
+
+        // WHY: the slots taken by a transaction that did not commit go back to the pool.
+        if state.committed.is_none() {
+            for (spare, taken) in state.spare.iter_mut().zip(&mut state.taken) {
+                spare.extend(taken.drain(..).rev());
+            }
+        }
+
+        let freed = state
+            .committed
+            .map(|version| ([&state.freed[0][..], &state.freed[1][..]], version));
+        self.pool
+            .finish(state.generation, [&state.spare[0], &state.spare[1]], freed);
+    }
+}
+
+pub(crate) struct Pending<'a> {
+    pub(crate) failed: Option<DbError>,
+    pub(crate) log: Vec<Action>,
+    pub(crate) ids: Ids<'a>,
+    pub(crate) lens: (u64, u64),
 }
 
 impl<'a, Store: StorageData> TransactionMut<'a, Store> {
@@ -73,26 +193,94 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     }
 
     pub(crate) fn new(root: RootMut<'a, Store>) -> Self {
-        Self { root, failed: None }
-    }
-
-    /// Whether one of the transaction's queries failed.
-    pub(crate) fn failed(&self) -> bool {
-        self.failed.is_some()
-    }
-
-    /// Access to the writer for MVCC page capture before commit.
-    pub(crate) fn root_view(&self) -> &crate::storage::pages::Writer<'_, Store> {
-        &self.root.view
-    }
-
-    /// Commits the transaction unless one of its queries failed: their
-    /// writes may be partial so the transaction is dropped instead.
-    pub(crate) fn commit(self) -> Result<(), DbError> {
-        match self.failed {
-            Some(error) => Err(error),
-            None => self.root.commit(),
+        Self {
+            root,
+            failed: None,
+            ids: None,
+            log: None,
         }
+    }
+
+    pub(crate) fn with_ids(mut self, pool: &'a IdPool) -> Self {
+        pool.init(&self.root.meta.graph);
+        self.ids = Some(Ids::new(pool, u64::MAX, pool.generation(), true));
+        self
+    }
+
+    pub(crate) fn concurrent(
+        root: RootMut<'a, Store>,
+        pool: &'a IdPool,
+        version: u64,
+        generation: u64,
+    ) -> Self {
+        Self {
+            root,
+            failed: None,
+            ids: Some(Ids::new(pool, version, generation, false)),
+            log: Some(Vec::new()),
+        }
+    }
+
+    pub(crate) fn committing(mut self, mut ids: Ids<'a>, replay: bool) -> Self {
+        // WHY: a replay redoes the removals, so the ids freed over the snapshot are forgotten.
+        if replay {
+            for freed in &mut ids.state.freed {
+                freed.clear();
+            }
+
+            ids.state.removed.clear();
+        }
+
+        self.ids = Some(ids);
+        self
+    }
+
+    pub(crate) fn into_pending<'r>(mut self, pool: &'r IdPool) -> Pending<'r> {
+        let state = self
+            .ids
+            .take()
+            .map(|mut ids| std::mem::take(&mut ids.state))
+            .unwrap_or_default();
+
+        Pending {
+            failed: self.failed.take(),
+            log: self.log.take().unwrap_or_default(),
+            ids: Ids { pool, state },
+            lens: self.root.view.lens(),
+        }
+    }
+
+    pub(crate) fn adopt(&mut self, overlay: &mut Overlay, lens: (u64, u64), meta: &Meta) {
+        self.root.adopt(overlay, lens, meta);
+    }
+
+    pub(crate) fn written(&self) -> Option<(u64, SyncMode)> {
+        // WHY: `None` for a failed query, the transaction will not commit.
+        self.failed.is_none().then(|| self.root.view.written())
+    }
+
+    pub(crate) fn removed(&self) -> &[DbId] {
+        self.ids.as_ref().map_or(&[], |ids| &ids.state.removed[..])
+    }
+
+    pub(crate) fn commit(mut self, version: u64) -> Result<(), DbError> {
+        // WHY: the writes of a failed query may be partial so it is dropped instead.
+        if let Some(error) = self.failed {
+            return Err(error);
+        }
+
+        let committed = self.root.commit();
+
+        if let Some(ids) = &mut self.ids {
+            match &committed {
+                Ok(()) => ids.state.committed = Some(version),
+                // WHY: the storage may hold either state after a failed commit,
+                // so the pool is made again from it.
+                Err(_) => ids.pool.reset(),
+            }
+        }
+
+        committed
     }
 
     /// The database as written by the transaction so far.
@@ -114,6 +302,12 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// Sets the `alias` of the node `id` replacing its current alias
     /// and taking the alias from the node that had it.
     pub(crate) fn insert_alias(&mut self, id: DbId, alias: &String) -> Result<(), DbError> {
+        self.set_alias(id, alias)?;
+        self.log(|| Action::InsertAlias(id, alias.clone()));
+        Ok(())
+    }
+
+    fn set_alias(&mut self, id: DbId, alias: &String) -> Result<(), DbError> {
         if alias.is_empty() {
             return Err(DbError::query(
                 DbErrorType::NotAllowed,
@@ -177,14 +371,27 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
 
     pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, DbError> {
         let root = &mut self.root;
-        root.meta
-            .graph
-            .insert_edge(&mut root.view, &mut root.meta.alloc, from, to)
+        let graph = &mut root.meta.graph;
+
+        let Some(ids) = &mut self.ids else {
+            return graph.insert_edge(&mut root.view, &mut root.meta.alloc, from, to);
+        };
+
+        let id = DbId(-(ids.take(true, |slot| graph.next_free(&root.view, true, slot))? as i64));
+        graph.insert_edge_at(&mut root.view, &mut root.meta.alloc, id, from, to)?;
+        self.log(|| Action::InsertEdge(id, from, to));
+        Ok(id)
     }
 
     /// Creates the index of the `key` and indexes the values of the key
     /// of all elements.
     pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
+        let count = self.create_index(key)?;
+        self.log(|| Action::InsertIndex(key.clone()));
+        Ok(count)
+    }
+
+    fn create_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         let root = &mut self.root;
 
         if root.meta.indexes.index(key).is_some() {
@@ -202,22 +409,35 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         )?;
         let last = root.meta.indexes.list().len() - 1;
         let key_id = root.meta.indexes.list()[last].key_id;
-        let ids = root
-            .meta
-            .graph
-            .elements(&root.view)
-            .collect::<Result<Vec<DbId>, DbError>>()?;
         let key_values = KeyValues(&root.meta.graph);
 
-        for id in ids {
-            if let Some(value) = key_values.value(&root.view, id, key_id)? {
-                root.meta.indexes.insert(
-                    &mut root.view,
-                    &mut root.meta.alloc,
-                    key_id,
-                    &value,
-                    id,
-                )?;
+        const BATCH: usize = 4096;
+        let mut slot = 1_u64;
+        let mut in_edges = false;
+
+        loop {
+            let batch: Vec<DbId> = {
+                let mut iter = root.meta.graph.elements_from(&root.view, slot, in_edges);
+                let ids: Vec<DbId> = iter.by_ref().take(BATCH).collect::<Result<Vec<_>, _>>()?;
+                in_edges = iter.edges;
+                slot = iter.slot;
+                ids
+            };
+
+            if batch.is_empty() {
+                break;
+            }
+
+            for id in batch {
+                if let Some(value) = key_values.value(&root.view, id, key_id)? {
+                    root.meta.indexes.insert(
+                        &mut root.view,
+                        &mut root.meta.alloc,
+                        key_id,
+                        &value,
+                        id,
+                    )?;
+                }
             }
         }
 
@@ -226,9 +446,16 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
 
     pub(crate) fn insert_node(&mut self) -> Result<DbId, DbError> {
         let root = &mut self.root;
-        root.meta
-            .graph
-            .insert_node(&mut root.view, &mut root.meta.alloc)
+        let graph = &mut root.meta.graph;
+
+        let Some(ids) = &mut self.ids else {
+            return graph.insert_node(&mut root.view, &mut root.meta.alloc);
+        };
+
+        let id = DbId(ids.take(false, |slot| graph.next_free(&root.view, false, slot))? as i64);
+        graph.insert_node_at(&mut root.view, &mut root.meta.alloc, id)?;
+        self.log(|| Action::InsertNode(id));
+        Ok(id)
     }
 
     /// Adds the `key_value` to the element `id` that does not have the
@@ -252,7 +479,9 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
             key,
             &key_value.value,
             id,
-        )
+        )?;
+        self.log(|| Action::InsertValue(id, key_value.clone()));
+        Ok(())
     }
 
     pub(crate) fn insert_or_replace_key_value(
@@ -260,6 +489,12 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         id: DbId,
         key_value: &DbKeyValue,
     ) -> Result<(), DbError> {
+        self.replace_value(id, key_value)?;
+        self.log(|| Action::ReplaceValue(id, key_value.clone()));
+        Ok(())
+    }
+
+    fn replace_value(&mut self, id: DbId, key_value: &DbKeyValue) -> Result<(), DbError> {
         let root = &mut self.root;
         let (key, old) = KeyValues(&root.meta.graph).insert(
             &mut root.view,
@@ -290,6 +525,17 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         key_value: &DbKeyValue,
         amend: &Amend,
     ) -> Result<bool, DbError> {
+        let amended = self.amend_value(id, key_value, amend)?;
+        self.log(|| Action::AmendValue(id, key_value.clone(), amend.clone()));
+        Ok(amended)
+    }
+
+    fn amend_value(
+        &mut self,
+        id: DbId,
+        key_value: &DbKeyValue,
+        amend: &Amend,
+    ) -> Result<bool, DbError> {
         let existing = self.read().value(id, &key_value.key)?;
 
         match existing {
@@ -310,12 +556,12 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
                     key: key_value.key.clone(),
                     value: merged_value,
                 };
-                self.insert_or_replace_key_value(id, &merged_kv)?;
+                self.replace_value(id, &merged_kv)?;
                 Ok(true)
             }
             None => match amend {
                 Amend::Add | Amend::AddBitwise(_) => {
-                    self.insert_or_replace_key_value(id, key_value)?;
+                    self.replace_value(id, key_value)?;
                     Ok(true)
                 }
                 Amend::Remove | Amend::RemoveBitwise(_) => Ok(false),
@@ -343,24 +589,38 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
             return Ok(false);
         }
 
+        self.remove_element(id)?;
+        self.log(|| Action::Remove(id));
+        Ok(true)
+    }
+
+    fn remove_element(&mut self, id: DbId) -> Result<(), DbError> {
         if 0 < id.0 {
             for edge in self.node_edges(id)? {
                 self.remove_all_values(edge)?;
             }
 
             self.remove_all_values(id)?;
+            let freed = Ids::freeing(&mut self.ids);
             let root = &mut self.root;
-            root.meta.graph.remove_node(&mut root.view, id)?;
+            root.meta.graph.remove_node(&mut root.view, id, freed)?;
         } else {
             self.remove_all_values(id)?;
+            let freed = Ids::freeing(&mut self.ids);
             let root = &mut self.root;
-            root.meta.graph.remove_edge(&mut root.view, id)?;
+            root.meta.graph.remove_edge(&mut root.view, id, freed)?;
         }
 
-        Ok(true)
+        Ok(())
     }
 
     pub(crate) fn remove_alias(&mut self, alias: &str) -> Result<bool, DbError> {
+        let removed = self.take_alias(alias)?;
+        self.log(|| Action::RemoveAlias(alias.to_string()));
+        Ok(removed)
+    }
+
+    fn take_alias(&mut self, alias: &str) -> Result<bool, DbError> {
         let value = DbValue::from(alias);
         let root = &mut self.root;
         let owner = root.meta.indexes.aliases().search(&root.view, &value)?;
@@ -385,12 +645,14 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
 
     pub(crate) fn remove_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         let root = &mut self.root;
-        root.meta.indexes.remove_index(
+        let count = root.meta.indexes.remove_index(
             &mut root.view,
             &mut root.meta.alloc,
             &mut root.meta.keys,
             key,
-        )
+        )?;
+        self.log(|| Action::RemoveIndex(key.clone()));
+        Ok(count)
     }
 
     pub(crate) fn reserve_key_value_capacity(
@@ -399,7 +661,14 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         additional: u64,
     ) -> Result<(), DbError> {
         let root = &mut self.root;
-        KeyValues(&root.meta.graph).reserve(&mut root.view, &mut root.meta.alloc, id, additional)
+        KeyValues(&root.meta.graph).reserve(
+            &mut root.view,
+            &mut root.meta.alloc,
+            id,
+            additional,
+        )?;
+        self.log(|| Action::ReserveValues(id, additional));
+        Ok(())
     }
 
     /// Removes the values of the `keys` from the element `id` and returns
@@ -427,6 +696,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
             }
         }
 
+        self.log(|| Action::RemoveKeys(id, keys.to_vec()));
         Ok(count)
     }
 

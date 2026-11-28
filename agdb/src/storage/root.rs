@@ -183,13 +183,53 @@ impl Meta {
 
     /// Makes the meta equal to the `meta`, sharing its key memo.
     fn copy_from(&mut self, meta: &Self) {
+        self.copy_with(meta, Keys::share);
+    }
+
+    fn adopt(&mut self, meta: &Self) {
+        self.copy_with(meta, Keys::adopt);
+    }
+
+    fn copy_with(&mut self, meta: &Self, keys: impl FnOnce(&mut Keys, &Keys)) {
         self.layout = meta.layout;
         self.alloc.clone_from(&meta.alloc);
         self.graph.clone_from(&meta.graph);
-        self.keys.share(&meta.keys);
+        keys(&mut self.keys, &meta.keys);
 
         if self.indexes != meta.indexes {
             self.indexes.clone_from(&meta.indexes);
+        }
+    }
+
+    pub(crate) fn copy_detached(&mut self, meta: &Self) {
+        self.layout = meta.layout;
+        self.alloc.clone_from(&meta.alloc);
+        self.graph.clone_from(&meta.graph);
+        self.keys.copy_detached(&meta.keys);
+
+        if self.indexes != meta.indexes {
+            self.indexes.clone_from(&meta.indexes);
+        }
+    }
+
+    pub(crate) fn copy_private(&mut self, meta: &Self) {
+        self.layout = meta.layout;
+        self.alloc.clone_from(&meta.alloc);
+        self.graph.clone_from(&meta.graph);
+        self.keys.copy_private(&meta.keys);
+
+        if self.indexes != meta.indexes {
+            self.indexes.clone_from(&meta.indexes);
+        }
+    }
+
+    pub(crate) fn detached(&self) -> Self {
+        Self {
+            layout: self.layout,
+            alloc: self.alloc.clone(),
+            graph: self.graph.clone(),
+            keys: self.keys.detached(),
+            indexes: self.indexes.clone(),
         }
     }
 
@@ -265,7 +305,7 @@ pub(crate) struct Root<S: StorageData> {
 pub(crate) struct RootMut<'a, S: StorageData> {
     pub(crate) view: Writer<'a, S>,
     pub(crate) meta: &'a mut Meta,
-    committed: Committed<'a>,
+    committed: Option<Committed<'a>>,
 }
 
 /// The committed meta of the [`Root`] of a transaction and whether the
@@ -325,15 +365,6 @@ impl<S: StorageData> Root<S> {
         self.overlay.shift()
     }
 
-    /// Clone of the committed meta. Used by `ConcurrentRoot` to give
-    /// epoch-based readers an independent snapshot.
-    pub(crate) fn committed_meta_clone(&self) -> Meta {
-        match &self.meta {
-            Some(meta) => meta.clone(),
-            None => self.work.clone(),
-        }
-    }
-
     pub(crate) fn storage(&self) -> &S {
         &self.storage
     }
@@ -385,11 +416,26 @@ impl<S: StorageData> Root<S> {
         Ok(RootMut {
             view,
             meta: &mut self.work,
-            committed: Committed {
+            committed: Some(Committed {
                 meta: &mut self.meta,
                 current: &mut self.current,
-            },
+            }),
         })
+    }
+}
+
+impl<'a, S: StorageData> RootMut<'a, S> {
+    pub(crate) fn over(view: Writer<'a, S>, meta: &'a mut Meta) -> Self {
+        Self {
+            view,
+            meta,
+            committed: None,
+        }
+    }
+
+    pub(crate) fn adopt(&mut self, overlay: &mut Overlay, lens: (u64, u64), meta: &Meta) {
+        self.view.adopt(overlay, lens);
+        self.meta.adopt(meta);
     }
 }
 
@@ -397,7 +443,11 @@ impl<S: StorageData> RootMut<'_, S> {
     /// Writes the meta to the root only if it changed: the root already
     /// holds the committed one.
     pub(crate) fn commit(mut self) -> Result<(), DbError> {
-        let changed = self.committed.meta.as_ref() != Some(&*self.meta);
+        let committed = self
+            .committed
+            .as_mut()
+            .expect("the writes over a snapshot are adopted");
+        let changed = committed.meta.as_ref() != Some(&*self.meta);
 
         if changed {
             self.view.write(0, &self.meta.encode())?;
@@ -406,15 +456,15 @@ impl<S: StorageData> RootMut<'_, S> {
         let result = self.view.commit();
 
         if result.is_err() {
-            *self.committed.meta = None;
+            *committed.meta = None;
         } else if changed {
-            self.committed
+            committed
                 .meta
                 .get_or_insert_with(Meta::default)
                 .copy_from(self.meta);
         }
 
-        *self.committed.current = result.is_ok();
+        *committed.current = result.is_ok();
         result
     }
 }

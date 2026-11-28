@@ -30,6 +30,7 @@ struct Storages {
     memory: MemoryStorage,
     mapped: FileStorageMemoryMapped,
     file: FileStorage,
+    cached: FileStorage,
     _dir: TestDir,
 }
 
@@ -50,6 +51,12 @@ fn filled<S: StorageData>(name: &str) -> S {
     storage
 }
 
+fn cached(name: &str) -> FileStorage {
+    let mut storage: FileStorage = filled(name);
+    storage.set_memory_limit(Some(LEN));
+    storage
+}
+
 fn storages() -> Storages {
     let dir = TestDir::temp();
 
@@ -57,6 +64,7 @@ fn storages() -> Storages {
         memory: filled(&path(&dir, "memory.agdb")),
         mapped: filled(&path(&dir, "mapped.agdb")),
         file: filled(&path(&dir, "file.agdb")),
+        cached: cached(&path(&dir, "cached.agdb")),
         _dir: dir,
     }
 }
@@ -92,6 +100,7 @@ fn new(bench: &mut Bench) {
 
 fn read(bench: &mut Bench, name: &str, len: usize) {
     let (mut memory, mut mapped, mut file) = (positions(len), positions(len), positions(len));
+    let mut cached = positions(len);
 
     bench
         .benchmark(name, storages)
@@ -102,6 +111,9 @@ fn read(bench: &mut Bench, name: &str, len: usize) {
             s.memory.read(memory(), len as u64).unwrap()[0]
         })
         .target("file", move |s| s.file.read(file(), len as u64).unwrap()[0])
+        .target("file_cached", move |s| {
+            s.cached.read(cached(), len as u64).unwrap()[0]
+        })
         .run();
 }
 
@@ -121,12 +133,14 @@ fn commit<S: StorageData>(storage: &mut S, pos: u64, bytes: &[u8]) {
 fn write(bench: &mut Bench, name: &str, len: usize) {
     let (mut memory, mut mapped, mut file) = (positions(len), positions(len), positions(len));
     let bytes = vec![2_u8; len];
+    let mut cached = positions(len);
 
     bench
         .benchmark(name, storages)
         .target("mapped", |s| commit(&mut s.mapped, mapped(), &bytes))
         .target("memory", |s| commit(&mut s.memory, memory(), &bytes))
         .target("file", |s| commit(&mut s.file, file(), &bytes))
+        .target("file_cached", |s| commit(&mut s.cached, cached(), &bytes))
         .run();
 }
 

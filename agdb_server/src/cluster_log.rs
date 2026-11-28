@@ -28,7 +28,8 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
     let log = ClusterLog::new(&file)?;
-    log.0.set_storage_config(config.storage);
+    log.0
+        .set_storage_config(crate::config::server_storage(config));
 
     Ok(log)
 }

@@ -1,21 +1,37 @@
 pub(crate) mod alloc;
 pub mod any_storage;
 pub(crate) mod concurrent_root;
+pub mod file_snapshot;
 pub mod file_storage;
 pub mod file_storage_memory_mapped;
 pub mod memory_storage;
 
 mod overlay;
+mod page_cache;
 #[allow(dead_code)]
 pub(crate) mod pages;
 mod ranges;
 pub(crate) mod root;
+pub(crate) mod segments;
 #[allow(dead_code)]
 pub(crate) mod storage_simulator;
 mod write_ahead_log;
 
 use crate::DbError;
+use file_snapshot::FileSnapshot;
+use segments::Segments;
 use std::borrow::Cow;
+
+/// The read-only bytes of a storage as of its last commit that the read
+/// transactions run on without waiting for the writers, see
+/// [`StorageData::snapshot()`].
+pub enum StorageSnapshot {
+    /// The copy-on-write bytes of an in-memory storage.
+    Segments(Segments),
+    /// The file of a [`FileStorage`](crate::FileStorage) with the old
+    /// value of the bytes written since.
+    File(FileSnapshot),
+}
 
 pub const DEFAULT_OVERLAY_LIMIT: u64 = 64 * 1024 * 1024;
 
@@ -54,6 +70,11 @@ impl std::fmt::Display for SyncMode {
 pub struct StorageConfig {
     pub sync_mode: SyncMode,
     pub overlay_limit: u64,
+    /// The memory the database may use, `None` (or `0`) for unlimited.
+    /// The memory and memory mapped databases fail the transactions that
+    /// would grow them past it, the file database caches its reads in
+    /// that much memory.
+    pub memory_limit: Option<u64>,
 }
 
 impl Default for StorageConfig {
@@ -61,6 +82,7 @@ impl Default for StorageConfig {
         Self {
             sync_mode: SyncMode::None,
             overlay_limit: DEFAULT_OVERLAY_LIMIT,
+            memory_limit: None,
         }
     }
 }
@@ -132,18 +154,42 @@ pub trait StorageData: Sized {
         DEFAULT_OVERLAY_LIMIT
     }
 
-    /// Whether this storage supports epoch-based concurrent reads
-    /// (lock-free readers). Returns `false` by default; `MemoryStorage`
-    /// returns `true`.
-    fn supports_epoch_reads(&self) -> bool {
-        false
+    /// The read-only snapshot of the bytes of the storage that the read
+    /// transactions run on without waiting for the writers, `None` (the
+    /// default) when they have to wait (they read from the storage).
+    /// [`MemoryStorage`](crate::MemoryStorage) and
+    /// [`FileStorageMemoryMapped`](crate::FileStorageMemoryMapped) take
+    /// it from their in-memory bytes, [`FileStorage`](crate::FileStorage)
+    /// reads its file. It is taken between the transactions only.
+    fn snapshot(&self) -> Option<StorageSnapshot> {
+        None
     }
 
-    /// Disables the page-overlay spill so that the committed buffer
-    /// always holds committed data. Used by the MVCC layer when
-    /// `supports_epoch_reads()` returns `true`. The default is a
-    /// no-op — file-backed storages rely on the WAL for recovery.
+    /// Disables the page-overlay spill so that the storage only changes
+    /// on commit. Used for the storages with a [`snapshot()`](Self::snapshot)
+    /// as their writes cannot be rolled back. The default is a no-op —
+    /// file-backed storages rely on the WAL for recovery.
     fn disable_spill(&mut self) {}
+
+    /// Fails if the storage may not grow to `len` bytes, e.g. past the
+    /// [`memory_limit()`](Self::memory_limit) of an in-memory storage.
+    /// Checked before a transaction grows the storage so that it fails
+    /// without changing it. The default always succeeds.
+    fn check_len(&self, _len: u64) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    /// Sets the memory the storage may use, `None` (or `0`) for
+    /// unlimited. The storages holding the bytes in memory fail to grow
+    /// past it (see [`check_len()`](Self::check_len)), the file storage
+    /// caches its reads in that much memory. The default does nothing.
+    fn set_memory_limit(&mut self, _limit: Option<u64>) {}
+
+    /// Returns the memory limit, see
+    /// [`set_memory_limit()`](Self::set_memory_limit). The default is `None`.
+    fn memory_limit(&self) -> Option<u64> {
+        None
+    }
 
     /// Sets the sync mode for this storage. The default implementation
     /// does nothing which is appropriate for in-memory storages.
@@ -205,6 +251,7 @@ pub(crate) mod tests {
                     StorageConfig {
                         sync_mode: SyncMode::None,
                         overlay_limit: DEFAULT_OVERLAY_LIMIT,
+                        memory_limit: None,
                     }
                 );
             }
@@ -213,6 +260,8 @@ pub(crate) mod tests {
 
     pub(crate) mod storage_data {
         use super::*;
+
+        const LIMIT: u64 = 8192;
 
         pub(crate) mod backup {
             use super::*;
@@ -382,6 +431,63 @@ pub(crate) mod tests {
                 assert_eq!(storage.len(), 2);
                 assert_eq!(storage.read(0, 2).unwrap().to_vec(), vec![1, 2]);
             }
+
+            pub(crate) fn resize_past_memory_limit_should_fail_if_bounded<S: StorageData>(
+                mut storage: S,
+                bounded: bool,
+            ) {
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.set_memory_limit(Some(2));
+
+                let grown = storage.resize(LIMIT);
+                storage.set_memory_limit(None);
+                storage.resize(3).unwrap();
+
+                assert_eq!(grown.is_err(), bounded);
+                assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+                storage.set_memory_limit(Some(2));
+                storage.resize(1).unwrap();
+                assert_eq!(storage.len(), 1);
+            }
+        }
+
+        pub(crate) mod check_len {
+            use super::*;
+
+            pub(crate) fn check_len_should_fail_past_memory_limit_if_bounded<S: StorageData>(
+                mut storage: S,
+                bounded: bool,
+            ) {
+                storage.set_memory_limit(Some(LIMIT));
+
+                assert!(storage.check_len(LIMIT).is_ok());
+                assert_eq!(storage.check_len(LIMIT + 1).is_err(), bounded);
+                storage.set_memory_limit(None);
+                assert!(storage.check_len(LIMIT + 1).is_ok());
+            }
+        }
+
+        pub(crate) mod set_memory_limit {
+            use super::*;
+
+            pub(crate) fn set_memory_limit_should_set_limit_with_zero_as_none<S: StorageData>(
+                mut storage: S,
+            ) {
+                storage.set_memory_limit(Some(LIMIT));
+                let limit = storage.memory_limit();
+                storage.set_memory_limit(Some(0));
+
+                assert_eq!(limit, Some(LIMIT));
+                assert_eq!(storage.memory_limit(), None);
+            }
+        }
+
+        pub(crate) mod memory_limit {
+            use super::*;
+
+            pub(crate) fn memory_limit_should_default_to_none<S: StorageData>(storage: S) {
+                assert_eq!(storage.memory_limit(), None);
+            }
         }
 
         pub(crate) mod set_overlay_limit {
@@ -461,6 +567,23 @@ pub(crate) mod tests {
                 storage.write(2, &[1]).unwrap();
 
                 assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![0, 0, 1]);
+            }
+
+            pub(crate) fn write_past_memory_limit_should_fail_if_bounded<S: StorageData>(
+                mut storage: S,
+                bounded: bool,
+            ) {
+                storage.write(0, &[1; LIMIT as usize]).unwrap();
+                storage.set_memory_limit(Some(LIMIT));
+
+                let overwritten = storage.write(0, &[2, 2]);
+                let extended = storage.write(LIMIT - 1, &[3, 3]);
+
+                assert!(overwritten.is_ok());
+                assert_eq!(extended.is_err(), bounded);
+                let expected_len = if bounded { LIMIT } else { LIMIT + 1 };
+                assert_eq!(storage.len(), expected_len);
+                assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![2, 2, 1]);
             }
 
             pub(crate) fn write_empty_should_do_nothing<S: StorageData>(mut storage: S) {

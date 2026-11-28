@@ -10,6 +10,7 @@ pub mod db_value;
 
 pub(crate) mod db_search_handlers;
 pub(crate) mod db_value_index;
+pub(crate) mod id_pool;
 pub(crate) mod legacy;
 pub(crate) mod rebuild;
 
@@ -103,27 +104,31 @@ pub const DB_VERSION: u64 = 2;
 ///
 /// # Multithreading
 ///
-/// The `agdb` is multithreading enabled. It is recommended to use `Arc<RwLock>`:
+/// The `agdb` is multithreading enabled. All of its methods take `&self`, so it can be
+/// shared between threads with an `Arc`:
 ///
 /// ```
 /// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db3.agdb");
-/// use std::sync::{Arc, RwLock};
+/// use std::sync::Arc;
 /// use agdb::Db;
 ///
-/// let db = Arc::new(RwLock::new(Db::new("db3.agdb").unwrap()));
-/// db.read().unwrap(); //for a read lock allowing Db::exec() and Db::transaction()
-/// db.write().unwrap(); //for a write lock allowing additionally Db::exec_mut() and Db::transaction_mut()
+/// let db = Arc::new(Db::new("db3.agdb").unwrap());
 /// ```
-/// Using the database in the multi-threaded environment is then the same as in a single
-/// threaded application (minus the locking). Nevertheless while Rust does prevent
-/// race conditions you still need to be on a lookout for potential deadlocks. This is
-/// one of the reasons why nested transactions are not supported by the `agdb`.
 ///
-/// Akin to the Rust borrow checker rules the `agdb` can handle unlimited number
-/// of concurrent reads (transactional or regular) but only single write operation
-/// at any one time. For that reason the transactions are not database states or objects
-/// but rather a function taking a closure executing the queries in an attempt to limit
-/// their scope as much as possible (and therefore the duration of the [exclusive] lock).
+/// Reads (`exec()` and read-only [`transaction()`](Self::transaction)) run concurrently
+/// on a consistent snapshot of the last commit and never wait for the writers.
+///
+/// Writes come in two kinds:
+///
+/// - [`transaction_mut()`](Self::transaction_mut) (and `exec_mut()`) writes exclusively:
+///   one at a time, so it never conflicts.
+/// - [`transaction()`](Self::transaction) with mutable queries runs concurrently with
+///   other transactions and applies its writes when it commits (last writer wins, see
+///   its documentation), failing with [`DbErrorType::Conflict`] only if an element it
+///   writes was removed meanwhile.
+///
+/// The transactions are functions taking a closure rather than objects to keep them
+/// as short as possible.
 ///
 /// # Storage
 ///
@@ -211,19 +216,17 @@ impl<Store: StorageData> DbImpl<Store> {
     /// let db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
     /// ```
     pub fn with_data(data: Store) -> Result<Self, DbError> {
-        let epoch_reads = data.supports_epoch_reads();
-
         if let Format::Legacy(_) = Format::detect(&Reader::new(&data))? {
             let (root, migration) = rebuild::migrate(data)?;
             return Ok(Self {
-                root: ConcurrentRoot::new(root, epoch_reads),
+                root: ConcurrentRoot::new(root),
                 migration: Some(migration),
             });
         }
 
         let root = Root::open(data, Layout::default())?;
         Ok(Self {
-            root: ConcurrentRoot::new(root, epoch_reads),
+            root: ConcurrentRoot::new(root),
             migration: None,
         })
     }
@@ -235,18 +238,28 @@ impl<Store: StorageData> DbImpl<Store> {
     /// at expense of the file size. For memory based storage this will
     /// dump the internal buffer to the `filename` which can be used to
     /// restore back the database by `DbMemory::new()`.
+    ///
+    /// It waits for the running write transaction (if any) and blocks
+    /// the next ones until it is done, the read transactions keep running.
+    /// Therefore it must not be called from within a transaction.
     pub fn backup(&self, filename: &str) -> Result<(), DbError> {
-        self.root.storage().backup(filename)
+        self.root.with_storage(|storage| storage.backup(filename))
     }
 
     /// Copies the database to `filename` path.  Consider calling
     /// `optimize_storage()` prior to this function to reduce the
     /// size of the storage file to be copied.
+    ///
+    /// Like [`backup()`](Self::backup) it excludes the write transactions
+    /// and must not be called from within a transaction.
     pub fn copy(&self, filename: &str) -> Result<Self, DbError> {
-        let storage = self.root.storage();
-        let mut copy = storage.copy(filename)?;
-        copy.set_sync_mode(storage.sync_mode());
-        copy.set_overlay_limit(storage.overlay_limit());
+        let copy = self.root.with_storage(|storage| {
+            let mut copy = storage.copy(filename)?;
+            copy.set_sync_mode(storage.sync_mode());
+            copy.set_overlay_limit(storage.overlay_limit());
+            copy.set_memory_limit(storage.memory_limit());
+            Ok::<_, DbError>(copy)
+        })?;
         Self::with_data(copy)
     }
 
@@ -291,8 +304,8 @@ impl<Store: StorageData> DbImpl<Store> {
 
     /// Returns the filename that was used to
     /// construct the database.
-    pub fn filename(&self) -> &str {
-        self.root.storage().name()
+    pub fn filename(&self) -> String {
+        self.root.info().name
     }
 
     /// Returns the conversion of the database to the current version
@@ -317,15 +330,40 @@ impl<Store: StorageData> DbImpl<Store> {
         self.root.with_storage_mut(|s| s.rename(filename))
     }
 
-    /// Executes immutable transaction. The transaction is running a closure `f`
-    /// that will receive `&Transaction` object to run `exec` queries as if run
-    /// on the main database object. You shall specify the return type `T`
+    /// Executes a concurrent transaction. The transaction is running a closure `f`
+    /// that will receive `&Transaction` object to run `exec` and `exec_mut` queries
+    /// as if run on the main database object. You shall specify the return type `T`
     /// (can be `()`) and the error type `E` that must be constructible from the `DbError`
     /// (`E` can be `DbError`).
     ///
-    /// Read transactions cannot be committed or rolled back but their main function is to ensure
-    /// that the database data does not change during their duration. Through its generic
-    /// parameters it also allows transforming the query results into a type `T`.
+    /// The transaction reads the database as it was when it started (a snapshot),
+    /// with its own writes, and does not wait for the other transactions nor block
+    /// them. A transaction that only reads cannot be committed or rolled back. A
+    /// transaction that wrote is committed after the closure returns `Ok` and rolled
+    /// back if the closure returns `Err` or if any of its mutable queries failed.
+    /// The closure runs once.
+    ///
+    /// If the database changed since the transaction started, its writes are applied
+    /// again to the current state when it commits:
+    ///
+    /// - The last transaction to commit a value of a key or an alias wins.
+    /// - Amends of values (e.g. [`Amend::Add`](crate::Amend::Add)) apply to the
+    ///   current value, so concurrent amends all count.
+    /// - Removing an element, value or alias that is already gone does nothing.
+    ///
+    /// The commit fails with [`DbErrorType::Conflict`] (and has no effect) if an
+    /// element it writes or connects with an edge was removed meanwhile, if it
+    /// creates an index that was created meanwhile or if the storage was optimized
+    /// or restored meanwhile. Use [`transaction_mut`](Self::transaction_mut) to
+    /// write exclusively instead, which never conflicts.
+    ///
+    /// The writes are held in memory until the commit: unlike those of
+    /// [`transaction_mut`](Self::transaction_mut) they are not spilled to the
+    /// storage nor bounded by its memory limit, so very large ones (e.g. imports)
+    /// are better written exclusively.
+    ///
+    /// Through its generic parameters it also allows transforming the query results
+    /// into a type `T`.
     pub fn transaction<T, E: From<DbError>>(
         &self,
         f: impl FnOnce(&Transaction<Store>) -> Result<T, E>,
@@ -365,10 +403,7 @@ impl<Store: StorageData> DbImpl<Store> {
 
     /// Returns the [`StorageConfig`] of this database.
     pub fn storage_config(&self) -> StorageConfig {
-        StorageConfig {
-            sync_mode: self.root.storage().sync_mode(),
-            overlay_limit: self.root.storage().overlay_limit(),
-        }
+        self.root.info().config
     }
 
     /// Sets the [`StorageConfig`] of this database, see [`SyncMode`] and
@@ -377,12 +412,13 @@ impl<Store: StorageData> DbImpl<Store> {
         self.root.with_storage_mut(|s| {
             s.set_sync_mode(config.sync_mode);
             s.set_overlay_limit(config.overlay_limit);
+            s.set_memory_limit(config.memory_limit);
         });
     }
 
     /// Returns the current [`SyncMode`] for this database.
     pub fn sync_mode(&self) -> SyncMode {
-        self.root.storage().sync_mode()
+        self.root.info().config.sync_mode
     }
 
     /// Sets the sync mode for this database. See [`SyncMode`] for details.
@@ -397,8 +433,11 @@ impl<Store: StorageData> DbImpl<Store> {
     /// frequent allocations). For file based storages this number will be accurate
     /// but the actually used space on disk will be higher up to the next file system
     /// block size.
+    ///
+    /// It does not wait for the running write transaction and reports the
+    /// size as of the last one that finished.
     pub fn size(&self) -> u64 {
-        self.root.storage().len()
+        self.root.info().len
     }
 
     /// Atomically replaces the database content with the data at `filename`.
@@ -588,6 +627,56 @@ mod tests {
             Ok(())
         });
         flags.writes.store(false, Ordering::Relaxed);
+    }
+
+    #[test]
+    fn transaction_should_write_without_a_snapshot() {
+        let test_file = TestFile::new();
+        let (db, _flags) = failable_db(test_file.file_name());
+
+        let id = db
+            .transaction(|t| -> Result<crate::DbId, DbError> {
+                let id = t
+                    .exec_mut(QueryBuilder::insert().nodes().aliases("n").query())?
+                    .ids()[0];
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values([[("k", 1).into()]])
+                        .ids("n")
+                        .query(),
+                )?;
+                let result = t.exec(QueryBuilder::select().ids("n").query())?;
+                assert_eq!(result.elements[0].values, vec![("k", 1).into()]);
+                Ok(id)
+            })
+            .unwrap();
+
+        let result = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
+        assert_eq!(result.elements[0].id, id);
+        assert_eq!(result.elements[0].values, vec![("k", 1).into()]);
+    }
+
+    #[test]
+    fn transaction_without_a_snapshot_should_drop_failed_writes() {
+        let test_file = TestFile::new();
+        let (db, _flags) = failable_db(test_file.file_name());
+
+        let error = db
+            .transaction(|t| -> Result<(), DbError> {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases("n").query())?;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from("n")
+                        .to("missing")
+                        .query(),
+                )?;
+                Ok(())
+            })
+            .unwrap_err();
+
+        assert_eq!(error.description, "Alias 'missing' not found");
+        assert!(db.exec(QueryBuilder::select().ids("n").query()).is_err());
     }
 
     #[test]
@@ -794,6 +883,7 @@ mod tests {
             StorageConfig {
                 sync_mode,
                 overlay_limit,
+                memory_limit: None,
             }
         }
 
@@ -1142,6 +1232,73 @@ mod tests {
                 }
             }
 
+            fn assert_readers_during_failed_commits<D: StorageData + Send + Sync>(
+                db: &DbImpl<D>,
+                mut commit: impl FnMut() -> Result<QueryResult, DbError>,
+            ) {
+                const COMMITS: usize = 300;
+                let running = std::sync::atomic::AtomicBool::new(true);
+
+                std::thread::scope(|scope| {
+                    let readers: Vec<_> = (0..2)
+                        .map(|_| {
+                            scope.spawn(|| {
+                                let mut reads = 0_u64;
+
+                                while running.load(std::sync::atomic::Ordering::Relaxed) {
+                                    assert_eq!(value(db), "original".into());
+                                    reads += 1;
+                                }
+
+                                reads
+                            })
+                        })
+                        .collect();
+
+                    for _ in 0..COMMITS {
+                        assert!(commit().is_err());
+                    }
+
+                    running.store(false, std::sync::atomic::Ordering::Relaxed);
+
+                    for reader in readers {
+                        assert_ne!(reader.join().unwrap(), 0);
+                    }
+                });
+            }
+
+            #[test]
+            fn transaction_mut_failed_flush_should_not_be_seen_by_readers() {
+                let platform = Arc::new(test_platform());
+                let db = inserted(mapped(&platform), StorageConfig::default());
+
+                assert_readers_during_failed_commits(&db, || {
+                    fail_once(&platform, FsOp::Write, WAL);
+                    modify(&db)
+                });
+
+                assert!(!poisoned(&db));
+            }
+
+            #[test]
+            fn transaction_mut_commit_past_memory_limit_should_not_fail_readers() {
+                let platform = Arc::new(test_platform());
+                let db = inserted(memory(&platform), StorageConfig::default());
+                db.set_storage_config(StorageConfig {
+                    memory_limit: Some(db.size() + 4096),
+                    ..db.storage_config()
+                });
+
+                assert_readers_during_failed_commits(&db, || {
+                    db.exec_mut(
+                        QueryBuilder::insert()
+                            .values(vec![vec![("k", vec![1_u8; 64 * 1024]).into()]])
+                            .ids("n")
+                            .query(),
+                    )
+                });
+            }
+
             #[test]
             fn transaction_mut_failed_query_should_refuse_the_transaction() {
                 let platform = Arc::new(test_platform());
@@ -1238,6 +1395,39 @@ mod tests {
                 assert!(db.size() <= len);
                 assert_eq!(value(&db), "original".into());
                 assert!(!platform.fs().exists(REBUILD).unwrap());
+            }
+
+            #[test]
+            fn optimize_storage_with_longer_reader_should_fail_and_keep_storage() {
+                let platform = Arc::new(test_platform());
+                let db = inserted(file(&platform), StorageConfig::default());
+                let len = db.size();
+                let reading = std::sync::Barrier::new(2);
+                let optimized = std::sync::atomic::AtomicBool::new(false);
+
+                let result = std::thread::scope(|scope| {
+                    scope.spawn(|| {
+                        db.transaction(|_| -> Result<(), DbError> {
+                            reading.wait();
+
+                            while !optimized.load(std::sync::atomic::Ordering::Relaxed) {
+                                std::thread::yield_now();
+                            }
+
+                            Ok(())
+                        })
+                    });
+                    reading.wait();
+                    let result = db.optimize_storage();
+                    optimized.store(true, std::sync::atomic::Ordering::Relaxed);
+                    result
+                });
+
+                assert!(result.is_err());
+                assert_eq!(db.size(), len);
+                assert_eq!(value(&db), "original".into());
+                db.optimize_storage().unwrap();
+                assert_eq!(value(&db), "original".into());
             }
 
             #[test]

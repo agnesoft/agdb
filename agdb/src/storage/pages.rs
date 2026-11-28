@@ -1,5 +1,6 @@
 use super::StorageData;
 use super::StorageSlice;
+use super::SyncMode;
 use crate::DbError;
 use crate::DbErrorType;
 
@@ -163,6 +164,11 @@ impl Overlay {
         self.arena.clear();
     }
 
+    pub(crate) fn recycle(&mut self) {
+        self.reset();
+        self.shrink();
+    }
+
     /// Keeps the capacity for [`KEPT_ARENA`] bytes of pages after a reset.
     fn shrink(&mut self) {
         let kept = ((2 * KEPT_ARENA) >> self.shift).max(MIN_TABLE);
@@ -211,7 +217,7 @@ impl Overlay {
 /// storage is restored from its WAL if the transaction does not commit
 /// after it was written to.
 pub(crate) struct Writer<'a, S: StorageData> {
-    storage: &'a mut S,
+    base: Base<'a, S>,
     overlay: &'a mut Overlay,
     len: u64,
     /// The shortest length of the transaction: the storage bytes past
@@ -219,6 +225,41 @@ pub(crate) struct Writer<'a, S: StorageData> {
     low: u64,
     limit: u64,
     touched: bool,
+}
+
+enum Base<'a, S: StorageData> {
+    Storage(&'a mut S),
+    Snapshot(&'a dyn View),
+}
+
+impl<S: StorageData> Base<'_, S> {
+    fn len(&self) -> u64 {
+        match self {
+            Self::Storage(storage) => storage.len(),
+            Self::Snapshot(snapshot) => snapshot.len(),
+        }
+    }
+
+    fn read(&self, pos: u64, len: u64) -> Result<StorageSlice<'_>, DbError> {
+        match self {
+            Self::Storage(storage) => storage.read(pos, len),
+            Self::Snapshot(snapshot) => snapshot.read(pos, len),
+        }
+    }
+
+    fn check_len(&self, len: u64) -> Result<(), DbError> {
+        match self {
+            Self::Storage(storage) => storage.check_len(len),
+            Self::Snapshot(_) => Ok(()),
+        }
+    }
+
+    fn storage(&mut self) -> &mut S {
+        match self {
+            Self::Storage(storage) => storage,
+            Self::Snapshot(_) => unreachable!("the writes over a snapshot are adopted"),
+        }
+    }
 }
 
 impl<'a, S: StorageData> Writer<'a, S> {
@@ -232,7 +273,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
         let limit = storage.overlay_limit();
 
         Ok(Self {
-            storage,
+            base: Base::Storage(storage),
             overlay,
             len,
             low: len,
@@ -241,8 +282,44 @@ impl<'a, S: StorageData> Writer<'a, S> {
         })
     }
 
+    pub(crate) fn over(snapshot: &'a dyn View, overlay: &'a mut Overlay) -> Self {
+        let len = snapshot.len();
+
+        Self {
+            base: Base::Snapshot(snapshot),
+            overlay,
+            len,
+            low: len,
+            limit: u64::MAX,
+            touched: false,
+        }
+    }
+
+    pub(crate) fn written(&self) -> (u64, SyncMode) {
+        let pages = self.overlay.pages.len() as u64 * self.overlay.page_size();
+        let sync = match &self.base {
+            Base::Storage(storage) => storage.sync_mode(),
+            Base::Snapshot(_) => SyncMode::None,
+        };
+        (pages + self.len.saturating_sub(self.base.len()), sync)
+    }
+
+    pub(crate) fn lens(&self) -> (u64, u64) {
+        (self.len, self.low)
+    }
+
+    pub(crate) fn adopt(&mut self, overlay: &mut Overlay, (len, low): (u64, u64)) {
+        std::mem::swap(&mut self.overlay.table, &mut overlay.table);
+        std::mem::swap(&mut self.overlay.arena, &mut overlay.arena);
+        std::mem::swap(&mut self.overlay.pages, &mut overlay.pages);
+        self.len = len;
+        self.low = low;
+    }
+
     pub(crate) fn commit(mut self) -> Result<(), DbError> {
-        match self.apply().and_then(|()| self.storage.flush()) {
+        let result = self.apply().and_then(|()| self.base.storage().flush());
+
+        match result {
             Ok(()) => {
                 self.touched = false;
                 Ok(())
@@ -262,57 +339,19 @@ impl<'a, S: StorageData> Writer<'a, S> {
         self.restore()
     }
 
-    /// Returns the old page contents from committed storage for each page
-    /// in the overlay. Used by the MVCC layer to populate the version
-    /// store before the pages are overwritten by [`commit`](Self::commit).
-    ///
-    /// **Precondition:** no spill has occurred during this transaction
-    /// (overlay limit was set high enough), so the storage still holds the
-    /// committed data.
-    pub(crate) fn capture_pages(&self) -> Result<Vec<(u64, Vec<u8>)>, DbError> {
-        let shift = self.overlay.shift;
-        let page_size = self.overlay.page_size();
-        let base_len = self.storage.len();
-        let mut captured = Vec::with_capacity(self.overlay.pages.len());
+    fn apply(&mut self) -> Result<(), DbError> {
+        let base_end = self.base_end();
+        let storage = self.base.storage();
 
-        for &(page, _) in &self.overlay.pages {
-            let start = page << shift;
-
-            if start < base_len {
-                let len = page_size.min(base_len - start);
-                let old_data = self.storage.read(start, len)?;
-                captured.push((page, old_data.into_owned()));
-            }
+        if base_end < self.len {
+            storage.check_len(self.len)?;
         }
 
-        Ok(captured)
-    }
-
-    /// Whether the storage size changed during this transaction (the
-    /// allocator requested more or fewer pages). Used by the MVCC layer
-    /// to know whether the committed buffer will be resized during commit.
-    pub(crate) fn storage_resized(&self) -> bool {
-        self.storage.len() != self.len
-    }
-
-    /// The number of dirty pages currently in the overlay.
-    pub(crate) fn dirty_page_count(&self) -> usize {
-        self.overlay.pages.len()
-    }
-
-    /// Returns the page numbers of all dirty pages in the overlay.
-    /// Used by the MVCC layer to update `page_epochs` even when no
-    /// readers were active (so old-page data was not captured).
-    pub(crate) fn dirty_pages(&self) -> Vec<u64> {
-        self.overlay.pages.iter().map(|&(page, _)| page).collect()
-    }
-
-    fn apply(&mut self) -> Result<(), DbError> {
         self.touched = true;
 
-        for len in [self.base_end(), self.len] {
-            if self.storage.len() != len {
-                self.storage.resize(len)?;
+        for len in [base_end, self.len] {
+            if storage.len() != len {
+                storage.resize(len)?;
             }
         }
 
@@ -330,8 +369,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
 
             if start < self.len {
                 let len = self.overlay.page_size().min(self.len - start) as usize;
-                self.storage
-                    .write(start, &self.overlay.bytes(slot)[..len])?;
+                storage.write(start, &self.overlay.bytes(slot)[..len])?;
             }
         }
 
@@ -341,7 +379,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
     }
 
     fn base_end(&self) -> u64 {
-        self.low.min(self.storage.len())
+        self.low.min(self.base.len())
     }
 
     fn lift(&mut self, page: u64) -> Result<usize, DbError> {
@@ -355,7 +393,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
         let arena_len = self.overlay.arena.len();
 
         if from_base != 0 {
-            let bytes = self.storage.read(start, from_base)?;
+            let bytes = self.base.read(start, from_base)?;
             self.overlay.arena.extend_from_slice(&bytes);
         }
 
@@ -367,7 +405,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
         if self.touched {
             self.touched = false;
             self.overlay.poisoned = true;
-            self.storage.recover_from_wal()?;
+            self.base.storage().recover_from_wal()?;
             self.overlay.poisoned = false;
         }
 
@@ -406,14 +444,14 @@ impl<S: StorageData> View for Writer<'_, S> {
         let dirty = (first..=last).any(|page| self.overlay.slot(page).is_some());
 
         if !dirty && end <= base_end {
-            return self.storage.read(pos, len);
+            return self.base.read(pos, len);
         }
 
         let mut buffer = vec![0_u8; len as usize];
         let from_base = base_end.saturating_sub(pos).min(len);
 
         if from_base != 0 {
-            buffer[..from_base as usize].copy_from_slice(&self.storage.read(pos, from_base)?);
+            buffer[..from_base as usize].copy_from_slice(&self.base.read(pos, from_base)?);
         }
 
         for page in first..=last {
@@ -436,6 +474,10 @@ impl<S: StorageData> ViewMut for Writer<'_, S> {
 
         if self.len < end {
             return Err(out_of_bounds("Write", pos, end, self.len));
+        }
+
+        if self.base_end() < end {
+            self.base.check_len(self.len)?;
         }
 
         let shift = self.overlay.shift;
@@ -472,9 +514,11 @@ impl<S: StorageData> ViewMut for Writer<'_, S> {
 /// commit, e.g. on an error or a panic.
 impl<S: StorageData> Drop for Writer<'_, S> {
     fn drop(&mut self) {
-        let _ = self.restore();
-        self.overlay.reset();
-        self.overlay.shrink();
+        if let Base::Storage(_) = self.base {
+            let _ = self.restore();
+            self.overlay.reset();
+            self.overlay.shrink();
+        }
     }
 }
 

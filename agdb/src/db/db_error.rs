@@ -12,6 +12,10 @@ use std::sync::PoisonError;
 /// Classification of what went wrong in the database operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DbErrorType {
+    /// A concurrent write transaction could not commit: another one
+    /// committed a change it conflicts with, e.g. removed an element it
+    /// changed. The transaction had no effect and can be run again.
+    Conflict,
     /// Failed to create a new database file or structure.
     DbCreate,
     /// An internal index was invalid or corrupted.
@@ -128,6 +132,7 @@ impl DbError {
 impl Display for DbErrorType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FMTResult {
         match self {
+            DbErrorType::Conflict => write!(f, "Conflict"),
             DbErrorType::DbCreate => write!(f, "DbCreate"),
             DbErrorType::InvalidIndex => write!(f, "InvalidIndex"),
             DbErrorType::NotEnoughData => write!(f, "NotEnoughData"),

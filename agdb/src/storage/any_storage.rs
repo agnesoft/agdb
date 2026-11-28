@@ -21,7 +21,7 @@ pub enum AnyStorageImpl<P: Platform> {
 /// The [`AnyStorageImpl`] on the production [`PlatformImpl`].
 pub type AnyStorage = AnyStorageImpl<PlatformImpl>;
 
-impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
+impl<P: Platform + Default + 'static> StorageData for AnyStorageImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         match self {
             Self::MemoryMapped(s) => s.backup(name),
@@ -70,11 +70,11 @@ impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
         }
     }
 
-    fn supports_epoch_reads(&self) -> bool {
+    fn snapshot(&self) -> Option<crate::storage::StorageSnapshot> {
         match self {
-            Self::MemoryMapped(s) => s.supports_epoch_reads(),
-            Self::Memory(s) => s.supports_epoch_reads(),
-            Self::File(s) => s.supports_epoch_reads(),
+            Self::MemoryMapped(s) => s.snapshot(),
+            Self::Memory(s) => s.snapshot(),
+            Self::File(s) => s.snapshot(),
         }
     }
 
@@ -83,6 +83,30 @@ impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
             Self::MemoryMapped(s) => s.disable_spill(),
             Self::Memory(s) => s.disable_spill(),
             Self::File(s) => s.disable_spill(),
+        }
+    }
+
+    fn check_len(&self, len: u64) -> Result<(), DbError> {
+        match self {
+            Self::MemoryMapped(s) => s.check_len(len),
+            Self::Memory(s) => s.check_len(len),
+            Self::File(s) => s.check_len(len),
+        }
+    }
+
+    fn set_memory_limit(&mut self, limit: Option<u64>) {
+        match self {
+            Self::MemoryMapped(s) => s.set_memory_limit(limit),
+            Self::Memory(s) => s.set_memory_limit(limit),
+            Self::File(s) => s.set_memory_limit(limit),
+        }
+    }
+
+    fn memory_limit(&self) -> Option<u64> {
+        match self {
+            Self::MemoryMapped(s) => s.memory_limit(),
+            Self::Memory(s) => s.memory_limit(),
+            Self::File(s) => s.memory_limit(),
         }
     }
 
@@ -308,6 +332,40 @@ mod tests {
                 }
             }
 
+            mod check_len {
+                use super::*;
+
+                #[test]
+                fn check_len_should_fail_past_memory_limit_if_bounded() {
+                    for (storage, _, _) in variants() {
+                        let bounded = !matches!(storage, AnyStorageImpl::File(_));
+                        crate::storage::tests::storage_data::check_len::check_len_should_fail_past_memory_limit_if_bounded(storage, bounded);
+                    }
+                }
+            }
+
+            mod set_memory_limit {
+                use super::*;
+
+                #[test]
+                fn set_memory_limit_should_set_limit_with_zero_as_none() {
+                    for (storage, _, _) in variants() {
+                        crate::storage::tests::storage_data::set_memory_limit::set_memory_limit_should_set_limit_with_zero_as_none(storage);
+                    }
+                }
+            }
+
+            mod memory_limit {
+                use super::*;
+
+                #[test]
+                fn memory_limit_should_default_to_none() {
+                    for (storage, _, _) in variants() {
+                        crate::storage::tests::storage_data::memory_limit::memory_limit_should_default_to_none(storage);
+                    }
+                }
+            }
+
             mod set_overlay_limit {
                 use super::*;
 
@@ -453,6 +511,14 @@ mod tests {
                         crate::storage::tests::storage_data::resize::resize_should_zero_new_bytes_and_cut_off_others(storage);
                     }
                 }
+
+                #[test]
+                fn resize_past_memory_limit_should_fail_if_bounded() {
+                    for (storage, _, _) in variants() {
+                        let bounded = !matches!(storage, AnyStorageImpl::File(_));
+                        crate::storage::tests::storage_data::resize::resize_past_memory_limit_should_fail_if_bounded(storage, bounded);
+                    }
+                }
             }
 
             mod write {
@@ -480,6 +546,14 @@ mod tests {
                         crate::storage::tests::storage_data::write::write_empty_should_do_nothing(
                             storage,
                         );
+                    }
+                }
+
+                #[test]
+                fn write_past_memory_limit_should_fail_if_bounded() {
+                    for (storage, _, _) in variants() {
+                        let bounded = !matches!(storage, AnyStorageImpl::File(_));
+                        crate::storage::tests::storage_data::write::write_past_memory_limit_should_fail_if_bounded(storage, bounded);
                     }
                 }
             }

@@ -733,11 +733,15 @@ impl ClusterStorage {
 
         let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
         self.db.db.restore(&db_path)?;
-        self.db.db.set_storage_config(config.storage);
+        self.db
+            .db
+            .set_storage_config(crate::config::server_storage(config));
 
         let log_path = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
         self.cluster_log.0.restore(&log_path)?;
-        self.cluster_log.0.set_storage_config(config.storage);
+        self.cluster_log
+            .0
+            .set_storage_config(crate::config::server_storage(config));
 
         let (index, term, commit) = self.cluster_log.cluster_log().await?;
         let logs = self.cluster_log.logs_unexecuted(commit).await?;

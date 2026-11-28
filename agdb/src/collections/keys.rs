@@ -18,6 +18,7 @@ use crate::storage::pages::ViewMut;
 use crate::utilities::serialize::u64_at;
 use crate::utilities::stable_hash::StableHash;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::PoisonError;
@@ -70,13 +71,42 @@ fn record_bytes(key: &DbValueIndex, refs: u64, hash: u64) -> [u8; RECORD] {
 /// of its transactions and clears it when one rolls back. Lookups never
 /// wait for the lock: a contended one reads the table.
 #[derive(Debug, Default)]
-struct Memo(Arc<Mutex<Option<KeyIds>>>);
+struct Memo {
+    ids: Arc<Mutex<Ids>>,
+    // WHY: read-only ids shared by the copies, memoized by the root when its snapshot
+    // was published; valid for a copy until it removes a key and takes them as its own.
+    base: Option<Arc<KeyIds>>,
+}
 
 type KeyIds = HashMap<[u8; 16], KeyId>;
 
+#[derive(Debug, Default)]
+struct Ids {
+    ids: Option<KeyIds>,
+    // WHY: the last freeze, kept while the ids only grow, so that freezing is amortized.
+    frozen: Option<Frozen>,
+}
+
+#[derive(Debug)]
+struct Frozen {
+    base: Option<Arc<KeyIds>>,
+    ids: Arc<KeyIds>,
+    own: usize,
+}
+
+impl Ids {
+    fn changed(&mut self) -> Option<&mut KeyIds> {
+        self.frozen = None;
+        self.ids.as_mut()
+    }
+}
+
 impl Clone for Memo {
     fn clone(&self) -> Self {
-        Self::default()
+        Self {
+            ids: Arc::default(),
+            base: self.base.clone(),
+        }
     }
 }
 
@@ -89,36 +119,137 @@ impl PartialEq for Memo {
 impl Memo {
     fn get(&self, key: Option<DbValueIndex>) -> Option<KeyId> {
         let key = key?.data();
-        self.0.try_lock().ok()?.as_ref()?.get(&key).copied()
+
+        if let Some(id) = self
+            .ids
+            .try_lock()
+            .ok()
+            .and_then(|ids| ids.ids.as_ref()?.get(&key).copied())
+        {
+            return Some(id);
+        }
+
+        self.base.as_ref()?.get(&key).copied()
     }
 
     fn insert(&self, key: Option<DbValueIndex>, id: KeyId) {
-        if let (Some(key), Ok(mut ids)) = (key, self.0.try_lock()) {
-            let ids = ids.get_or_insert_with(HashMap::new);
+        if let (Some(key), Ok(mut ids)) = (key, self.ids.try_lock()) {
+            self.memoize(&mut ids, key.data(), id);
+        }
+    }
 
-            if ids.len() < MEMO_LIMIT {
-                ids.insert(key.data(), id);
+    fn memoize(&self, ids: &mut Ids, key: [u8; 16], id: KeyId) {
+        if self.base.as_ref().and_then(|base| base.get(&key)) != Some(&id) {
+            let Ids { ids: own, frozen } = ids;
+            let own = own.get_or_insert_with(HashMap::new);
+            let len = own.len();
+
+            // WHY: the frozen ids may miss new ids (a cache) but not hold a changed one
+            match own.entry(key) {
+                Entry::Occupied(mut entry) if *entry.get() != id => {
+                    entry.insert(id);
+                    *frozen = None;
+                }
+                Entry::Occupied(_) => {}
+                Entry::Vacant(entry) if len < MEMO_LIMIT => {
+                    entry.insert(id);
+                }
+                Entry::Vacant(_) => {}
             }
         }
     }
 
-    fn remove(&self, key: &DbValueIndex) {
-        if let Some(ids) = self
-            .0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .as_mut()
-        {
+    fn remove(&mut self, key: &DbValueIndex) {
+        let mut ids = self.ids.lock().unwrap_or_else(PoisonError::into_inner);
+
+        if let Some(base) = self.base.take() {
+            let own = ids.ids.get_or_insert_with(HashMap::new);
+
+            for (key, id) in base.iter() {
+                if own.len() == MEMO_LIMIT {
+                    break;
+                }
+
+                own.entry(*key).or_insert(*id);
+            }
+        }
+
+        if let Some(ids) = ids.changed() {
             ids.remove(&key.data());
         }
     }
 
+    fn merge(&self, memo: &Memo) -> bool {
+        if Arc::ptr_eq(&self.ids, &memo.ids) {
+            return true;
+        }
+
+        let mut ids = self.ids.lock().unwrap_or_else(PoisonError::into_inner);
+
+        if !matches!((&ids.frozen, &memo.base), (Some(frozen), Some(base)) if Arc::ptr_eq(&frozen.ids, base))
+        {
+            return false;
+        }
+
+        let other = memo.ids.lock().unwrap_or_else(PoisonError::into_inner);
+
+        for (key, id) in other.ids.iter().flatten() {
+            self.memoize(&mut ids, *key, *id);
+        }
+
+        true
+    }
+
     fn share(&self) -> Self {
-        Self(Arc::clone(&self.0))
+        Self {
+            ids: Arc::clone(&self.ids),
+            base: self.base.clone(),
+        }
     }
 
     fn clear(&self) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).take();
+        let mut ids = self.ids.lock().unwrap_or_else(PoisonError::into_inner);
+        ids.changed();
+        ids.ids = None;
+    }
+
+    fn freeze(&self) -> Option<Arc<KeyIds>> {
+        let mut ids = self.ids.lock().unwrap_or_else(PoisonError::into_inner);
+        let Ids { ids: own, frozen } = &mut *ids;
+
+        let Some(own) = own.as_ref().filter(|own| !own.is_empty()) else {
+            return self.base.clone();
+        };
+
+        // WHY: refreeze only after a change or growth by a quarter, so that a
+        // filling memo is not copied on every commit
+        if let Some(frozen) = frozen
+            && match (&frozen.base, &self.base) {
+                (Some(base), Some(own_base)) => Arc::ptr_eq(base, own_base),
+                (None, None) => true,
+                _ => false,
+            }
+            && (own.len() == frozen.own
+                || (own.len() < frozen.own + frozen.own / 4 && own.len() < MEMO_LIMIT))
+        {
+            return Some(Arc::clone(&frozen.ids));
+        }
+
+        let ids = match &self.base {
+            Some(base) if MEMO_LIMIT <= base.len() => Arc::clone(base),
+            base => {
+                let mut ids = base.as_deref().cloned().unwrap_or_default();
+                let room = MEMO_LIMIT - ids.len();
+                ids.extend(own.iter().take(room).map(|(key, id)| (*key, *id)));
+                Arc::new(ids)
+            }
+        };
+        *frozen = Some(Frozen {
+            base: self.base.clone(),
+            ids: Arc::clone(&ids),
+            own: own.len(),
+        });
+        Some(ids)
     }
 }
 
@@ -177,6 +308,39 @@ impl Keys {
         self.free = keys.free;
         self.table = keys.table;
         self.memo = keys.memo.share();
+    }
+
+    pub(crate) fn adopt(&mut self, keys: &Keys) {
+        if self.memo.merge(&keys.memo) {
+            let memo = std::mem::take(&mut self.memo);
+            self.share(keys);
+            self.memo = memo;
+        } else {
+            self.share(keys);
+        }
+    }
+
+    pub(crate) fn copy_detached(&mut self, keys: &Keys) {
+        self.array.clone_from(&keys.array);
+        self.len = keys.len;
+        self.free = keys.free;
+        self.table = keys.table;
+        self.memo.clear();
+        self.memo.base = keys.memo.freeze();
+    }
+
+    pub(crate) fn copy_private(&mut self, keys: &Keys) {
+        self.array.clone_from(&keys.array);
+        self.len = keys.len;
+        self.free = keys.free;
+        self.table = keys.table;
+        self.memo = keys.memo.clone();
+    }
+
+    pub(crate) fn detached(&self) -> Self {
+        let mut keys = self.clone();
+        keys.memo.base = self.memo.freeze();
+        keys
     }
 
     /// Clears the memo, also of the keys sharing it.
@@ -410,7 +574,13 @@ pub(crate) mod tests {
 
     /// The number of keys in the memo of the `keys`.
     pub(crate) fn memoized(keys: &Keys) -> usize {
-        keys.memo.0.lock().unwrap().as_ref().map_or(0, HashMap::len)
+        keys.memo
+            .ids
+            .lock()
+            .unwrap()
+            .ids
+            .as_ref()
+            .map_or(0, HashMap::len)
     }
 
     fn short(key: &str) -> Option<DbValueIndex> {
@@ -492,6 +662,275 @@ pub(crate) mod tests {
                     assert_eq!(memo.clone().get(short("a")), None);
                     assert_eq!(memo.get(short("a")), Some(KeyId(1)));
                 }
+
+                #[test]
+                fn clone_should_keep_base() {
+                    let memo = with_base(&[("a", 1)]);
+                    assert_eq!(memo.clone().get(short("a")), Some(KeyId(1)));
+                }
+            }
+        }
+
+        fn with_base(ids: &[(&str, u32)]) -> Memo {
+            Memo {
+                ids: Arc::default(),
+                base: Some(Arc::new(
+                    ids.iter()
+                        .map(|(key, id)| (short(key).unwrap().data(), KeyId(*id)))
+                        .collect(),
+                )),
+            }
+        }
+
+        fn fill(memo: &Memo, ids: std::ops::Range<u32>) {
+            for id in ids {
+                memo.insert(short(&format!("k{id}")), KeyId(id));
+            }
+        }
+
+        fn own(memo: &Memo) -> usize {
+            memo.ids
+                .lock()
+                .unwrap()
+                .ids
+                .as_ref()
+                .map_or(0, HashMap::len)
+        }
+
+        mod get {
+            use super::*;
+
+            #[test]
+            fn get_should_prefer_own_ids_over_base() {
+                // GIVEN a base and an own id of the key a
+                let memo = with_base(&[("a", 1), ("b", 2)]);
+                memo.insert(short("a"), KeyId(3));
+
+                // WHEN getting the keys
+                // THEN the own id comes first, then the base
+                assert_eq!(memo.get(short("a")), Some(KeyId(3)));
+                assert_eq!(memo.get(short("b")), Some(KeyId(2)));
+                assert_eq!(memo.get(short("c")), None);
+            }
+        }
+
+        mod insert {
+            use super::*;
+
+            #[test]
+            fn insert_of_base_id_should_not_memoize_it_again() {
+                // GIVEN a base with the key a
+                let memo = with_base(&[("a", 1)]);
+
+                // WHEN inserting it with the same id and then another one
+                memo.insert(short("a"), KeyId(1));
+                assert_eq!(own(&memo), 0);
+                memo.insert(short("a"), KeyId(2));
+
+                // THEN only the other id is the own one
+                assert_eq!(own(&memo), 1);
+                assert_eq!(memo.get(short("a")), Some(KeyId(2)));
+            }
+
+            #[test]
+            fn insert_of_changed_id_should_drop_frozen_ids() {
+                // GIVEN frozen own ids
+                let memo = Memo::default();
+                memo.insert(short("a"), KeyId(1));
+                let frozen = memo.freeze().unwrap();
+
+                // WHEN inserting the same id and then another one
+                memo.insert(short("a"), KeyId(1));
+                assert!(Arc::ptr_eq(&frozen, &memo.freeze().unwrap()));
+                memo.insert(short("a"), KeyId(2));
+
+                // THEN only the other one makes the ids again
+                let changed = memo.freeze().unwrap();
+                assert_eq!(changed.get(&short("a").unwrap().data()), Some(&KeyId(2)));
+            }
+
+            #[test]
+            fn insert_past_limit_should_change_only_memoized_ids() {
+                // GIVEN a full memo
+                let memo = Memo::default();
+                fill(&memo, 0..MEMO_LIMIT as u32);
+
+                // WHEN inserting a new key and changing a memoized one
+                memo.insert(short("new"), KeyId(1));
+                memo.insert(short("k0"), KeyId(1));
+
+                // THEN only the memoized one changes
+                assert_eq!(own(&memo), MEMO_LIMIT);
+                assert_eq!(memo.get(short("new")), None);
+                assert_eq!(memo.get(short("k0")), Some(KeyId(1)));
+            }
+        }
+
+        mod remove {
+            use super::*;
+
+            #[test]
+            fn remove_should_take_base_as_own_ids() {
+                // GIVEN a base of the keys a and b
+                let mut memo = with_base(&[("a", 1), ("b", 2)]);
+
+                // WHEN removing the key a
+                memo.remove(&short("a").unwrap());
+
+                // THEN the key b is an own id and the base is gone
+                assert!(memo.base.is_none());
+                assert_eq!(own(&memo), 1);
+                assert_eq!(memo.get(short("a")), None);
+                assert_eq!(memo.get(short("b")), Some(KeyId(2)));
+            }
+
+            #[test]
+            fn remove_with_base_past_memo_limit_should_take_limit() {
+                // GIVEN a base of more keys than the memo holds
+                let keys = (0..=MEMO_LIMIT)
+                    .map(|i| format!("k{i}"))
+                    .collect::<Vec<_>>();
+                let ids = keys
+                    .iter()
+                    .zip(1..)
+                    .map(|(key, id)| (key.as_str(), id))
+                    .collect::<Vec<_>>();
+                let mut memo = with_base(&ids);
+
+                // WHEN removing another key
+                memo.remove(&short("a").unwrap());
+
+                // THEN the memo holds as many as it can
+                assert_eq!(own(&memo), MEMO_LIMIT);
+            }
+
+            #[test]
+            fn remove_without_ids_should_do_nothing() {
+                let mut memo = Memo::default();
+                memo.remove(&short("a").unwrap());
+                assert_eq!(own(&memo), 0);
+            }
+        }
+
+        mod freeze {
+            use super::*;
+
+            #[test]
+            fn freeze_should_keep_ids_until_grown_by_quarter() {
+                // GIVEN frozen own ids
+                let memo = Memo::default();
+                fill(&memo, 0..8);
+                let frozen = memo.freeze().unwrap();
+
+                // WHEN they grow by less than a quarter and then by one
+                fill(&memo, 8..9);
+                let kept = memo.freeze().unwrap();
+                fill(&memo, 9..10);
+                let grown = memo.freeze().unwrap();
+
+                // THEN only the quarter makes them again with all the ids
+                assert!(Arc::ptr_eq(&frozen, &kept));
+                assert_eq!(grown.len(), 10);
+            }
+
+            #[test]
+            fn freeze_should_make_ids_again_at_limit() {
+                // GIVEN own ids frozen just below the limit
+                let memo = Memo::default();
+                fill(&memo, 0..MEMO_LIMIT as u32 - 1);
+                let frozen = memo.freeze().unwrap();
+
+                // WHEN they grow to the limit
+                fill(&memo, MEMO_LIMIT as u32 - 1..MEMO_LIMIT as u32);
+
+                // THEN they are made again
+                assert_eq!(frozen.len(), MEMO_LIMIT - 1);
+                assert_eq!(memo.freeze().unwrap().len(), MEMO_LIMIT);
+            }
+
+            #[test]
+            fn freeze_past_limit_should_keep_ids_of_base() {
+                // GIVEN own ids over a full base and over one with room for
+                // one of them
+                let full = Memo::default();
+                fill(&full, 0..MEMO_LIMIT as u32);
+                let memo = Memo {
+                    ids: Arc::default(),
+                    base: full.freeze(),
+                };
+                fill(&memo, MEMO_LIMIT as u32..MEMO_LIMIT as u32 + 2);
+                let almost = Memo::default();
+                fill(&almost, 0..MEMO_LIMIT as u32 - 1);
+                let other = Memo {
+                    ids: Arc::default(),
+                    base: almost.freeze(),
+                };
+                fill(&other, MEMO_LIMIT as u32..MEMO_LIMIT as u32 + 2);
+
+                // WHEN freezing them
+                let frozen = memo.freeze().unwrap();
+                let other = other.freeze().unwrap();
+
+                // THEN they hold at most the limit, the full base as it is
+                assert!(Arc::ptr_eq(&frozen, memo.base.as_ref().unwrap()));
+                assert_eq!(other.len(), MEMO_LIMIT);
+            }
+
+            #[test]
+            fn freeze_without_own_ids_should_be_base() {
+                // GIVEN a memo over a base and an empty one
+                let memo = with_base(&[("a", 1)]);
+
+                // WHEN freezing them
+                // THEN they are the base
+                assert!(Arc::ptr_eq(
+                    &memo.freeze().unwrap(),
+                    memo.base.as_ref().unwrap()
+                ));
+                assert!(Memo::default().freeze().is_none());
+            }
+
+            #[test]
+            fn freeze_should_make_ids_again_only_once_changed() {
+                // GIVEN own ids over a base
+                let memo = with_base(&[("a", 1)]);
+                memo.insert(short("b"), KeyId(2));
+
+                // WHEN freezing them twice, and again after a change
+                let frozen = memo.freeze().unwrap();
+                assert!(Arc::ptr_eq(&frozen, &memo.freeze().unwrap()));
+                memo.insert(short("c"), KeyId(3));
+                let changed = memo.freeze().unwrap();
+
+                // THEN the change makes them again with the base
+                assert!(!Arc::ptr_eq(&frozen, &changed));
+                assert_eq!(changed.len(), 3);
+                assert_eq!(changed.get(&short("a").unwrap().data()), Some(&KeyId(1)));
+            }
+
+            #[test]
+            fn freeze_over_other_base_should_make_ids_again() {
+                // GIVEN own ids frozen over a base, shared with a memo
+                // without one and one with another base
+                let memo = with_base(&[("a", 1)]);
+                memo.insert(short("b"), KeyId(2));
+                let frozen = memo.freeze().unwrap();
+                let mut shared = memo.share();
+                shared.base = None;
+                let mut other = memo.share();
+                other.base = with_base(&[("a", 1)]).base;
+
+                // WHEN freezing the shared ones
+                let without = shared.freeze().unwrap();
+                let again = shared.freeze().unwrap();
+                let over_other = other.freeze().unwrap();
+
+                // THEN each makes its own, kept until another is made
+                assert!(!Arc::ptr_eq(&frozen, &without));
+                assert_eq!(without.len(), 1);
+                assert!(Arc::ptr_eq(&without, &again));
+                assert!(!Arc::ptr_eq(&frozen, &over_other));
+                assert_eq!(over_other.len(), 2);
             }
         }
 
@@ -644,7 +1083,7 @@ pub(crate) mod tests {
                     let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
                     let id = keys.insert(view, alloc, &"a".into()).unwrap();
                     let keys = Keys::decode(&keys.encode(), DEFAULT_PAGE_SHIFT);
-                    let ids = keys.memo.0.lock().unwrap();
+                    let ids = keys.memo.ids.lock().unwrap();
                     let calls = view.calls.get();
                     assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(id));
                     assert!(calls < view.calls.get());
@@ -771,6 +1210,142 @@ pub(crate) mod tests {
                         let error = keys.key(view, KeyId(id)).unwrap_err();
                         assert_eq!(error.description, format!("Invalid key id '{id}'"));
                     }
+                });
+            }
+        }
+
+        mod detached {
+            use super::*;
+
+            #[test]
+            fn detached_should_find_memoized_keys_without_reading() {
+                with_view(|view, alloc| {
+                    // GIVEN keys with a memoized key
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+
+                    // WHEN detaching a copy of them
+                    let detached = keys.detached();
+
+                    // THEN the copy finds the key in the base of its memo
+                    let calls = view.calls.get();
+                    assert_eq!(detached.id(view, &"a".into()).unwrap(), Some(id));
+                    assert_eq!(calls, view.calls.get());
+                    assert_eq!(memoized(&detached), 0);
+                });
+            }
+        }
+
+        mod copy_private {
+            use super::*;
+
+            #[test]
+            fn copy_private_should_find_base_keys_and_keep_own_memo() {
+                with_view(|view, alloc| {
+                    // GIVEN detached keys with a memoized key
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    let detached = keys.detached();
+                    let mut copy = Keys::new(DEFAULT_PAGE_SHIFT);
+
+                    // WHEN copying them privately and memoizing in the copy
+                    copy.copy_private(&detached);
+                    copy.memo.insert(short("b"), KeyId(5));
+
+                    // THEN the copy finds the key without reading and its
+                    // memo is its own
+                    let calls = view.calls.get();
+                    assert_eq!(copy.id(view, &"a".into()).unwrap(), Some(id));
+                    assert_eq!(calls, view.calls.get());
+                    assert_eq!(copy, detached);
+                    assert_eq!(memoized(&copy), 1);
+                    assert_eq!(memoized(&detached), 0);
+                });
+            }
+        }
+
+        mod adopt {
+            use super::*;
+
+            #[test]
+            fn adopt_over_frozen_ids_should_memoize_them_in_own_memo() {
+                with_view(|view, alloc| {
+                    // GIVEN keys with a memoized key and a transaction over
+                    // their snapshot adding another
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    keys.insert(view, alloc, &"a".into()).unwrap();
+                    let mut transaction = Keys::new(DEFAULT_PAGE_SHIFT);
+                    transaction.copy_private(&keys.detached());
+                    let id = transaction.insert(view, alloc, &"b".into()).unwrap();
+
+                    // WHEN adopting the transaction
+                    let shared = keys.memo.share();
+                    keys.adopt(&transaction);
+
+                    // THEN the keys keep their memo with both keys
+                    assert!(Arc::ptr_eq(&keys.memo.ids, &shared.ids));
+                    assert_eq!(memoized(&keys), 2);
+                    assert_eq!(keys.memo.get(short("b")), Some(id));
+                    assert_eq!(keys, transaction);
+                });
+            }
+
+            #[test]
+            fn adopt_over_other_ids_should_share_its_memo() {
+                with_view(|view, alloc| {
+                    // GIVEN keys and a transaction over other ids
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    keys.insert(view, alloc, &"a".into()).unwrap();
+                    let mut transaction = Keys::new(DEFAULT_PAGE_SHIFT);
+                    transaction.insert(view, alloc, &"b".into()).unwrap();
+
+                    // WHEN adopting it
+                    keys.adopt(&transaction);
+
+                    // THEN the keys share its memo
+                    assert!(Arc::ptr_eq(&keys.memo.ids, &transaction.memo.ids));
+                });
+            }
+
+            #[test]
+            fn adopt_of_shared_memo_should_keep_it() {
+                // GIVEN keys sharing a memo
+                let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                keys.memo.insert(short("a"), KeyId(1));
+                let mut shared = Keys::new(DEFAULT_PAGE_SHIFT);
+                shared.share(&keys);
+
+                // WHEN adopting one into the other
+                keys.adopt(&shared);
+
+                // THEN the memo is the same
+                assert!(Arc::ptr_eq(&keys.memo.ids, &shared.memo.ids));
+                assert_eq!(memoized(&keys), 1);
+            }
+        }
+
+        mod copy_detached {
+            use super::*;
+
+            #[test]
+            fn copy_detached_should_replace_memo_with_memoized_keys() {
+                with_view(|view, alloc| {
+                    // GIVEN keys with a memoized key and a copy memoizing
+                    // its own
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    let mut copy = Keys::new(DEFAULT_PAGE_SHIFT);
+                    copy.memo.insert(short("b"), KeyId(5));
+
+                    // WHEN copying the keys into it
+                    copy.copy_detached(&keys);
+
+                    // THEN it finds only the memoized key without reading
+                    let calls = view.calls.get();
+                    assert_eq!(copy.id(view, &"a".into()).unwrap(), Some(id));
+                    assert_eq!(calls, view.calls.get());
+                    assert_eq!(memoized(&copy), 0);
+                    assert_eq!(copy, keys);
                 });
             }
         }

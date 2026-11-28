@@ -104,5 +104,9 @@ pub fn config_to_str(config: &ConfigImpl) -> String {
         "overlay_limit: {}\n",
         config.storage.overlay_limit
     ));
+    buffer.push_str(&format!(
+        "memory_limit: {}\n",
+        config.storage.memory_limit.unwrap_or(0)
+    ));
     buffer
 }
